@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Coming%20Soon-blue)](https://chrome.google.com/webstore)
 [![Tests](https://github.com/GeoffreyPlitt/saveit/workflows/Tests/badge.svg)](https://github.com/GeoffreyPlitt/saveit/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://github.com/GeoffreyPlitt/saveit)
+[![codecov](https://codecov.io/gh/GeoffreyPlitt/saveit/branch/main/graph/badge.svg)](https://codecov.io/gh/GeoffreyPlitt/saveit)
 
 A minimalist Chrome extension that sends the current page or right-clicked link URL, title, and timestamp to a user-configured webhook as JSON, with retries and error toasts.
 
