@@ -3,6 +3,9 @@
  * Handles context menus, toolbar clicks, webhook requests, and notifications
  */
 
+// Import utilities
+importScripts('utils.js');
+
 // Register context menu on extension installation
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -10,6 +13,11 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Send to Webhook',
     contexts: ['link', 'page']
   });
+});
+
+// Handle toolbar icon clicks (chrome.action.onClicked)
+chrome.action.onClicked.addListener(async (tab) => {
+  await sendToWebhook(tab.url, tab.title);
 });
 
 // Handle context menu clicks
@@ -48,8 +56,8 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
  */
 async function sendToWebhook(url, title) {
   try {
-    // Get webhook configuration
-    const { webhookUrl, apiKey } = await chrome.storage.sync.get(['webhookUrl', 'apiKey']);
+    // Get webhook configuration using utils
+    const { webhookUrl, apiKey } = await getWebhookConfig();
     
     if (!webhookUrl) {
       showErrorNotification('No webhook URL configured', url);
@@ -84,15 +92,21 @@ async function sendToWebhook(url, title) {
     showSuccessNotification(title);
 
   } catch (error) {
-    // Log error details
-    await chrome.storage.local.set({
-      lastError: {
-        url: url,
-        title: title,
-        error: error.message,
-        timestamp: Date.now()
-      }
-    });
+    // Enhanced error logging with response details
+    const errorData = {
+      url: url,
+      title: title,
+      error: error.message,
+      timestamp: Date.now()
+    };
+
+    // Include response details if available
+    if (error.responseDetails) {
+      errorData.responseDetails = error.responseDetails;
+    }
+
+    // Log error using utils
+    await logError(errorData);
 
     // Show error notification
     showErrorNotification(error.message, url);
@@ -128,25 +142,3 @@ function showErrorNotification(error, url) {
   });
 }
 
-/**
- * Fetch with retry logic - imported from utils.js concept
- * @param {string} url - The URL to fetch
- * @param {object} options - Fetch options
- * @param {number} retries - Number of retries (default: 3)
- * @param {number} delay - Delay between retries in ms (default: 3000)
- */
-async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    return response;
-  } catch (error) {
-    if (retries > 1) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries - 1, delay);
-    }
-    throw error;
-  }
-}
