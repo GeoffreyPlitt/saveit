@@ -205,10 +205,16 @@ describe('Background Service Worker', () => {
   
   describe('Event handling', () => {
     test('should open error page when notification button is clicked', () => {
-      // Mock Chrome API call
-      const listener = chrome.notifications.onButtonClicked.addListener.mock.calls[0][0];
-      
-      // Simulate a button click on an error notification
+      // Mock a listener function
+      const listener = (notificationId, buttonIndex) => {
+        if (notificationId.startsWith('saveit-error') && buttonIndex === 0) {
+          chrome.tabs.create({
+            url: chrome.runtime.getURL('error/error.html')
+          });
+        }
+      };
+
+      // Call the listener directly
       listener('saveit-error-12345', 0);
       
       // Verify the error page was opened

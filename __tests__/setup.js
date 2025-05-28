@@ -2,6 +2,14 @@
  * Test setup file for mocking Chrome extension APIs
  */
 
+// Simple test to avoid Jest error "Your test suite must contain at least one test"
+describe('Test setup', () => {
+  test('Chrome API mocks are defined', () => {
+    expect(chrome).toBeDefined();
+    expect(chrome.storage).toBeDefined();
+  });
+});
+
 // Mock Chrome APIs
 global.chrome = {
   storage: {

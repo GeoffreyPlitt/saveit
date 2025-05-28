@@ -129,11 +129,11 @@ async function testWebhook() {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      const responseText = await response.text();
+      await response.text(); // Read response but we don't need to use it
       showStatus(`✅ Webhook test successful! Status: ${response.status}`, 'success');
     } else {
-      const responseText = await response.text();
-      showStatus(`❌ Webhook test failed: ${response.status} ${response.statusText}${responseText ? ` - ${responseText.substring(0, 100)}` : ''}`, 'error');
+      const errorText = await response.text();
+      showStatus(`❌ Webhook test failed: ${response.status} ${response.statusText}${errorText ? ` - ${errorText.substring(0, 100)}` : ''}`, 'error');
     }
     
   } catch (error) {
