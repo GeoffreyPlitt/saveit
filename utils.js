@@ -1,14 +1,12 @@
 /**
  * Shared utilities for SaveIt Chrome Extension
- * These are defined globally so they can be accessed by other scripts
- * @fileoverview
  */
 
 // Self-executing function to avoid polluting the global namespace
 (function(global) {
   /**
-   * Fetch with retry logic for robust webhook requests
-   * @param {string} url - The URL to fetch
+   * Fetch with retry logic
+   * @param {string} url - URL to fetch
    * @param {object} options - Fetch options
    * @param {number} retries - Number of retries (default: 3)
    * @param {number} delay - Delay between retries in ms (default: 3000)
@@ -24,16 +22,16 @@
         if (!response.ok) {
           // Capture response details for error logging
           const responseText = await response.text().catch(() => 'Unable to read response');
-          const errorDetails = {
+          const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+          
+          error.responseDetails = {
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries(response.headers.entries()),
             responseBody: responseText,
-            attempt: attempt
+            attempt
           };
           
-          const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
-          error.responseDetails = errorDetails;
           throw error;
         }
         
@@ -41,63 +39,47 @@
       } catch (error) {
         lastError = error;
         
-        // If this is not the last attempt, wait before retrying
+        // If not the last attempt, wait before retrying
         if (attempt < retries) {
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
     
-    // All retries exhausted, throw the last error
-    throw lastError;
+    throw lastError; // All retries exhausted
   }
 
   /**
-   * Get webhook configuration from storage
-   * @returns {Promise<{webhookUrl: string, apiKey: string}>} Configuration object
+   * Storage utility functions
    */
-  async function getWebhookConfig() {
-    const { webhookUrl, apiKey } = await chrome.storage.sync.get(['webhookUrl', 'apiKey']);
-    return { webhookUrl, apiKey };
-  }
-
-  /**
-   * Save webhook configuration to storage
-   * @param {string} webhookUrl - The webhook URL
-   * @param {string} apiKey - The API key/Bearer token
-   */
-  async function saveWebhookConfig(webhookUrl, apiKey) {
-    await chrome.storage.sync.set({ webhookUrl, apiKey });
-  }
-
-  /**
-   * Log error details for debugging
-   * @param {object} errorDetails - Error details object
-   */
-  async function logError(errorDetails) {
-    await chrome.storage.local.set({ 
-      lastError: { 
-        ...errorDetails, 
-        timestamp: Date.now() 
-      } 
-    });
-  }
-
-  /**
-   * Get last error from storage
-   * @returns {Promise<object>} Last error object
-   */
-  async function getLastError() {
-    const { lastError } = await chrome.storage.local.get(['lastError']);
-    return lastError;
-  }
+  const storage = {
+    // Get webhook configuration
+    getConfig: async () => {
+      const { webhookUrl, apiKey } = await chrome.storage.sync.get(['webhookUrl', 'apiKey']);
+      return { webhookUrl, apiKey };
+    },
+    
+    // Save webhook configuration
+    saveConfig: async (webhookUrl, apiKey) => 
+      chrome.storage.sync.set({ webhookUrl, apiKey }),
+    
+    // Log error details
+    logError: async (errorDetails) => 
+      chrome.storage.local.set({ 
+        lastError: { ...errorDetails, timestamp: Date.now() } 
+      }),
+    
+    // Get last error
+    getError: async () => {
+      const { lastError } = await chrome.storage.local.get(['lastError']);
+      return lastError;
+    }
+  };
 
   // Export utility functions to the global scope
-  // This is the best approach for Chrome extensions that don't use module bundlers
   global.fetchWithRetry = fetchWithRetry;
-  global.getWebhookConfig = getWebhookConfig;
-  global.saveWebhookConfig = saveWebhookConfig;
-  global.logError = logError;
-  global.getLastError = getLastError;
-
+  global.getWebhookConfig = storage.getConfig;
+  global.saveWebhookConfig = storage.saveConfig;
+  global.logError = storage.logError;
+  global.getLastError = storage.getError;
 })(typeof self !== 'undefined' ? self : this);

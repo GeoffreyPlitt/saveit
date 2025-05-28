@@ -1,19 +1,23 @@
 /**
  * SaveIt Options Page JavaScript
- * Handles webhook configuration and settings management
  */
 
+// Cache DOM elements for performance
+const elements = {};
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load existing settings
+  // Cache DOM elements
+  ['webhookUrl', 'apiKey', 'optionsForm', 'testButton', 'status', 'webhookUrlValidation', 'apiKeyValidation']
+    .forEach(id => elements[id] = document.getElementById(id));
+  
+  // Load settings
   await loadSettings();
   
   // Setup event listeners
-  document.getElementById('optionsForm').addEventListener('submit', saveSettings);
-  document.getElementById('testButton').addEventListener('click', testWebhook);
-  
-  // Setup real-time validation
-  document.getElementById('webhookUrl').addEventListener('input', validateWebhookUrl);
-  document.getElementById('apiKey').addEventListener('input', validateApiKey);
+  elements.optionsForm.addEventListener('submit', saveSettings);
+  elements.testButton.addEventListener('click', testWebhook);
+  elements.webhookUrl.addEventListener('input', () => validateInput('webhookUrl', validateUrl));
+  elements.apiKey.addEventListener('input', () => validateInput('apiKey', validateToken));
 });
 
 /**
@@ -24,13 +28,13 @@ async function loadSettings() {
     const { webhookUrl, apiKey } = await chrome.storage.sync.get(['webhookUrl', 'apiKey']);
     
     if (webhookUrl) {
-      document.getElementById('webhookUrl').value = webhookUrl;
-      validateWebhookUrl(); // Trigger validation
+      elements.webhookUrl.value = webhookUrl;
+      validateInput('webhookUrl', validateUrl);
     }
     
     if (apiKey) {
-      document.getElementById('apiKey').value = apiKey;
-      validateApiKey(); // Trigger validation
+      elements.apiKey.value = apiKey;
+      validateInput('apiKey', validateToken);
     }
   } catch (error) {
     showStatus('Failed to load settings', 'error');
@@ -39,29 +43,25 @@ async function loadSettings() {
 
 /**
  * Save settings to storage
- * @param {Event} event - Form submit event
  */
 async function saveSettings(event) {
   event.preventDefault();
   
-  const webhookUrl = document.getElementById('webhookUrl').value.trim();
-  const apiKey = document.getElementById('apiKey').value.trim();
+  const webhookUrl = elements.webhookUrl.value.trim();
+  const apiKey = elements.apiKey.value.trim();
   
   // Validate webhook URL
   if (!webhookUrl) {
-    showStatus('Webhook URL is required', 'error');
-    return;
+    return showStatus('Webhook URL is required', 'error');
   }
   
   try {
     new URL(webhookUrl); // Validate URL format
   } catch (error) {
-    showStatus('Please enter a valid webhook URL', 'error');
-    return;
+    return showStatus('Please enter a valid webhook URL', 'error');
   }
   
   try {
-    // Save to storage
     await chrome.storage.sync.set({ webhookUrl, apiKey });
     showStatus('Settings saved successfully!', 'success');
   } catch (error) {
@@ -73,88 +73,72 @@ async function saveSettings(event) {
  * Test webhook configuration
  */
 async function testWebhook() {
-  const webhookUrl = document.getElementById('webhookUrl').value.trim();
-  const apiKey = document.getElementById('apiKey').value.trim();
+  const webhookUrl = elements.webhookUrl.value.trim();
+  const apiKey = elements.apiKey.value.trim();
   
   if (!webhookUrl) {
-    showStatus('Please enter a webhook URL first', 'error');
-    return;
+    return showStatus('Please enter a webhook URL first', 'error');
   }
   
   // Validate URL format
   try {
     new URL(webhookUrl);
   } catch (error) {
-    showStatus('Please enter a valid webhook URL', 'error');
-    return;
+    return showStatus('Please enter a valid webhook URL', 'error');
   }
   
   // Show loading state
-  const testButton = document.getElementById('testButton');
-  const originalText = testButton.textContent;
-  testButton.textContent = 'Testing...';
-  testButton.disabled = true;
+  const originalText = elements.testButton.textContent;
+  elements.testButton.textContent = 'Testing...';
+  elements.testButton.disabled = true;
   
   try {
-    // Prepare test payload
-    const payload = {
-      url: 'https://example.com/test',
-      title: 'SaveIt Configuration Test',
-      timestamp: Date.now()
-    };
-    
-    // Prepare request options
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    };
-    
-    // Add authorization header if API key is provided
-    if (apiKey) {
-      options.headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-    
-    // Send test request with timeout
+    // Test request with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     const response = await fetch(webhookUrl, {
-      ...options,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
+      },
+      body: JSON.stringify({
+        url: 'https://example.com/test',
+        title: 'SaveIt Configuration Test',
+        timestamp: Date.now()
+      }),
       signal: controller.signal
     });
     
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      await response.text(); // Read response but we don't need to use it
-      showStatus(`✅ Webhook test successful! Status: ${response.status}`, 'success');
+      await response.text();
+      showStatus(`✅ Test successful! Status: ${response.status}`, 'success');
     } else {
       const errorText = await response.text();
-      showStatus(`❌ Webhook test failed: ${response.status} ${response.statusText}${errorText ? ` - ${errorText.substring(0, 100)}` : ''}`, 'error');
+      const errorMsg = errorText ? ` - ${errorText.substring(0, 100)}` : '';
+      showStatus(`❌ Test failed: ${response.status} ${response.statusText}${errorMsg}`, 'error');
     }
-    
   } catch (error) {
-    if (error.name === 'AbortError') {
-      showStatus('❌ Webhook test timed out (10 seconds)', 'error');
-    } else {
-      showStatus(`❌ Webhook test failed: ${error.message}`, 'error');
-    }
+    const message = error.name === 'AbortError' ? 
+      '❌ Test timed out (10 seconds)' : 
+      `❌ Test failed: ${error.message}`;
+    showStatus(message, 'error');
   } finally {
     // Restore button state
-    testButton.textContent = originalText;
-    testButton.disabled = false;
+    elements.testButton.textContent = originalText;
+    elements.testButton.disabled = false;
   }
 }
 
 /**
- * Validate webhook URL in real-time
+ * Validate input with given validator function
  */
-function validateWebhookUrl() {
-  const input = document.getElementById('webhookUrl');
-  const validation = document.getElementById('webhookUrlValidation');
+function validateInput(fieldName, validatorFn) {
+  const input = elements[fieldName];
+  const validation = elements[`${fieldName}Validation`];
   const value = input.value.trim();
   
   if (!value) {
@@ -163,66 +147,47 @@ function validateWebhookUrl() {
     return;
   }
   
+  const result = validatorFn(value);
+  input.className = result.valid ? 'valid' : 'invalid';
+  validation.className = `input-validation show ${result.valid ? 'valid' : 'invalid'}`;
+  validation.textContent = result.message;
+}
+
+/**
+ * Validate URL
+ */
+function validateUrl(url) {
   try {
-    const url = new URL(value);
-    if (url.protocol === 'https:') {
-      input.className = 'valid';
-      validation.className = 'input-validation show valid';
-      validation.textContent = '✅ Valid HTTPS webhook URL';
-    } else if (url.protocol === 'http:') {
-      input.className = 'valid';
-      validation.className = 'input-validation show valid';
-      validation.textContent = '⚠️ Valid HTTP URL (HTTPS recommended for security)';
-    } else {
-      input.className = 'invalid';
-      validation.className = 'input-validation show invalid';
-      validation.textContent = '❌ Only HTTP/HTTPS URLs are supported';
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol === 'https:') {
+      return { valid: true, message: '✅ Valid HTTPS webhook URL' };
+    } else if (parsedUrl.protocol === 'http:') {
+      return { valid: true, message: '⚠️ Valid HTTP URL (HTTPS recommended for security)' };
     }
+    return { valid: false, message: '❌ Only HTTP/HTTPS URLs are supported' };
   } catch (error) {
-    input.className = 'invalid';
-    validation.className = 'input-validation show invalid';
-    validation.textContent = '❌ Please enter a valid URL';
+    return { valid: false, message: '❌ Please enter a valid URL' };
   }
 }
 
 /**
- * Validate API key in real-time
+ * Validate API token
  */
-function validateApiKey() {
-  const input = document.getElementById('apiKey');
-  const validation = document.getElementById('apiKeyValidation');
-  const value = input.value.trim();
-  
-  if (!value) {
-    input.className = '';
-    validation.className = 'input-validation';
-    return;
+function validateToken(token) {
+  if (token.length < 8) {
+    return { valid: false, message: '⚠️ API key seems short (consider using a strong token)' };
   }
-  
-  if (value.length < 8) {
-    input.className = 'invalid';
-    validation.className = 'input-validation show invalid';
-    validation.textContent = '⚠️ API key seems short (consider using a strong token)';
-  } else {
-    input.className = 'valid';
-    validation.className = 'input-validation show valid';
-    validation.textContent = '✅ API key looks good';
-  }
+  return { valid: true, message: '✅ API key looks good' };
 }
 
 /**
  * Show status message
- * @param {string} message - Status message
- * @param {string} type - Message type ('success' or 'error')
  */
 function showStatus(message, type) {
-  const statusDiv = document.getElementById('status');
-  statusDiv.textContent = message;
-  statusDiv.className = `status ${type}`;
-  statusDiv.style.display = 'block';
+  elements.status.textContent = message;
+  elements.status.className = `status ${type}`;
+  elements.status.style.display = 'block';
   
   // Hide status after 5 seconds
-  setTimeout(() => {
-    statusDiv.style.display = 'none';
-  }, 5000);
+  setTimeout(() => elements.status.style.display = 'none', 5000);
 }

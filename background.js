@@ -16,15 +16,11 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Handle toolbar icon clicks (chrome.action.onClicked)
-chrome.action.onClicked.addListener(async (tab) => {
-  await sendToWebhook(tab.url, tab.title);
-});
+chrome.action.onClicked.addListener(tab => sendToWebhook(tab.url, tab.title));
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  const url = info.linkUrl || tab.url;
-  const title = tab.title;
-  await sendToWebhook(url, title);
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  sendToWebhook(info.linkUrl || tab.url, tab.title);
 });
 
 // Handle messages from popup
@@ -33,19 +29,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendToWebhook(request.url, request.title)
       .then(() => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
-    
-    // Return true to indicate async response
-    return true;
+    return true; // Indicate async response
   }
 });
 
 // Handle notification button clicks
-chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
   if (notificationId.startsWith('saveit-error') && buttonIndex === 0) {
-    // Open error details page
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('error/error.html')
-    });
+    chrome.tabs.create({ url: chrome.runtime.getURL('error/error.html') });
   }
 });
 
@@ -56,89 +47,59 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
  */
 async function sendToWebhook(url, title) {
   try {
-    // Get webhook configuration using utils
+    // Get webhook configuration
     const { webhookUrl, apiKey } = await getWebhookConfig();
     
     if (!webhookUrl) {
-      showErrorNotification('No webhook URL configured', url);
+      showNotification(false, 'No webhook URL configured', url);
       return;
     }
 
-    // Prepare payload
-    const payload = {
-      url: url,
-      title: title,
-      timestamp: Date.now()
-    };
-
-    // Prepare request options
+    // Prepare payload & options
+    const payload = { url, title, timestamp: Date.now() };
     const options = {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     };
 
-    // Add authorization header if API key is provided
-    if (apiKey) {
-      options.headers['Authorization'] = `Bearer ${apiKey}`;
-    }
+    // Add authorization if provided
+    if (apiKey) options.headers['Authorization'] = `Bearer ${apiKey}`;
 
     // Send request with retry logic
     await fetchWithRetry(webhookUrl, options);
-    
-    // Show success notification
-    showSuccessNotification(title);
+    showNotification(true, title);
 
   } catch (error) {
-    // Enhanced error logging with response details
-    const errorData = {
-      url: url,
-      title: title,
-      error: error.message,
-      timestamp: Date.now()
-    };
+    // Log error with details
+    await logError({
+      url, title, error: error.message,
+      timestamp: Date.now(),
+      ...(error.responseDetails && { responseDetails: error.responseDetails })
+    });
 
-    // Include response details if available
-    if (error.responseDetails) {
-      errorData.responseDetails = error.responseDetails;
-    }
-
-    // Log error using utils
-    await logError(errorData);
-
-    // Show error notification
-    showErrorNotification(error.message, url);
+    showNotification(false, error.message, url);
   }
 }
 
 /**
- * Show success notification
- * @param {string} title - Page title
+ * Show notification
+ * @param {boolean} success - Whether operation was successful
+ * @param {string} message - Message to show
+ * @param {string} [url] - URL for error messages
  */
-function showSuccessNotification(title) {
-  chrome.notifications.create({
+function showNotification(success, message, url) {
+  const options = {
     type: 'basic',
     iconUrl: 'icons/icon-16.png',
-    title: 'SaveIt: Sent!',
-    message: title
-  });
+    title: `SaveIt: ${success ? 'Sent!' : 'Failed'}`,
+    message: success ? message : `Failed to send: ${url || message}`
+  };
+  
+  if (!success) {
+    options.buttons = [{ title: 'View Error' }];
+    chrome.notifications.create(`saveit-error-${Date.now()}`, options);
+  } else {
+    chrome.notifications.create(options);
+  }
 }
-
-/**
- * Show error notification with action button
- * @param {string} error - Error message
- * @param {string} url - Failed URL
- */
-function showErrorNotification(error, url) {
-  const notificationId = `saveit-error-${Date.now()}`;
-  chrome.notifications.create(notificationId, {
-    type: 'basic',
-    iconUrl: 'icons/icon-16.png',
-    title: 'SaveIt: Failed',
-    message: `Failed to send: ${url}`,
-    buttons: [{ title: 'View Error' }]
-  });
-}
-
