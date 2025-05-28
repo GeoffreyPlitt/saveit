@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SaveIt - Error Details</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.5;
+      background-color: #f9fafb;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header img {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .header h1 {
+      color: #ef4444;
+      margin-bottom: 8px;
+    }
+    
+    .error-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .error-field {
+      margin-bottom: 16px;
+    }
+    
+    .error-field:last-child {
+      margin-bottom: 0;
+    }
+    
+    .field-label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+      display: block;
+    }
+    
+    .field-value {
+      background-color: #f3f4f6;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 14px;
+      word-break: break-all;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .field-value.error-message {
+      background-color: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+    
+    .timestamp {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 32px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .primary {
+      background-color: #22c55e;
+      color: white;
+    }
+    
+    .primary:hover {
+      background-color: #16a34a;
+    }
+    
+    .secondary {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+    
+    .secondary:hover {
+      background-color: #e5e7eb;
+    }
+    
+    .no-error {
+      text-align: center;
+      color: #6b7280;
+      font-style: italic;
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="../icons/icon-48.png" alt="SaveIt">
+    <h1>Error Details</h1>
+    <p>Last webhook error information</p>
+  </div>
+
+  <div id="errorContent">
+    <div class="no-error">
+      Loading error details...
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="retryButton" class="primary" style="display: none;">Retry Last Request</button>
+    <button id="optionsButton" class="secondary">Configure Webhook</button>
+    <button id="clearButton" class="secondary" style="display: none;">Clear Error</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadErrorDetails();
+      
+      // Setup event listeners
+      document.getElementById('retryButton').addEventListener('click', retryLastRequest);
+      document.getElementById('optionsButton').addEventListener('click', openOptions);
+      document.getElementById('clearButton').addEventListener('click', clearError);
+    });
+
+    async function loadErrorDetails() {
+      try {
+        const { lastError } = await chrome.storage.local.get(['lastError']);
+        
+        if (!lastError) {
+          document.getElementById('errorContent').innerHTML = 
+            '<div class="no-error">No recent errors found.</div>';
+          return;
+        }
+        
+        // Format timestamp
+        const timestamp = new Date(lastError.timestamp).toLocaleString();
+        
+        // Build error display
+        const errorHtml = `
+          <div class="error-card">
+            <div class="error-field">
+              <span class="field-label">Failed URL:</span>
+              <div class="field-value">${escapeHtml(lastError.url || 'Unknown')}</div>
+            </div>
+            
+            <div class="error-field">
+              <span class="field-label">Page Title:</span>
+              <div class="field-value">${escapeHtml(lastError.title || 'Unknown')}</div>
+            </div>
+            
+            <div class="error-field">
+              <span class="field-label">Error Message:</span>
+              <div class="field-value error-message">${escapeHtml(lastError.error || 'Unknown error')}</div>
+            </div>
+            
+            <div class="error-field">
+              <span class="field-label">Timestamp:</span>
+              <div class="field-value timestamp">${timestamp}</div>
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('errorContent').innerHTML = errorHtml;
+        
+        // Show action buttons
+        document.getElementById('retryButton').style.display = 'inline-block';
+        document.getElementById('clearButton').style.display = 'inline-block';
+        
+      } catch (error) {
+        document.getElementById('errorContent').innerHTML = 
+          '<div class="no-error">Failed to load error details.</div>';
+      }
+    }
+
+    async function retryLastRequest() {
+      try {
+        const { lastError } = await chrome.storage.local.get(['lastError']);
+        
+        if (!lastError || !lastError.url) {
+          alert('No request to retry');
+          return;
+        }
+        
+        // Send message to background script to retry
+        chrome.runtime.sendMessage({
+          action: 'sendToWebhook',
+          url: lastError.url,
+          title: lastError.title || 'Retry Request'
+        }, (response) => {
+          if (response && response.success) {
+            alert('Request sent successfully!');
+            // Optionally clear the error and refresh
+            clearError();
+          } else {
+            alert('Retry failed. Check your webhook configuration.');
+          }
+        });
+        
+      } catch (error) {
+        alert('Failed to retry request: ' + error.message);
+      }
+    }
+
+    function openOptions() {
+      chrome.runtime.openOptionsPage();
+    }
+
+    async function clearError() {
+      try {
+        await chrome.storage.local.remove(['lastError']);
+        document.getElementById('errorContent').innerHTML = 
+          '<div class="no-error">No recent errors found.</div>';
+        document.getElementById('retryButton').style.display = 'none';
+        document.getElementById('clearButton').style.display = 'none';
+      } catch (error) {
+        alert('Failed to clear error: ' + error.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
