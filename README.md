@@ -1,4 +1,4 @@
-# SaveIt - Webhook Manager Chrome Extension
+# SaveIt - Webhook Manager Chrome Extension 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Coming%20Soon-blue)](https://chrome.google.com/webstore)
