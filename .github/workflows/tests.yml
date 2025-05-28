@@ -36,9 +36,17 @@ jobs:
     - name: Generate coverage report
       run: |
         mkdir -p coverage
-        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage --coverageReporters=lcov
+        # Generate coverage data in multiple formats
+        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage
+        # Generate text-lcov format specifically for Codecov
+        docker run --rm saveit-test npm test -- --coverage --coverageReporters=text-lcov > coverage.lcov
+        # Debug coverage files
+        ./scripts/check-coverage.sh
         
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.lcov
+        fail_ci_if_error: true
+        verbose: true

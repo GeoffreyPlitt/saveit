@@ -29,17 +29,13 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onInstalle
 
 // Handle toolbar icon clicks (chrome.action.onClicked)
 if (typeof chrome !== 'undefined' && chrome.action && chrome.action.onClicked) {
-  chrome.action.onClicked.addListener(async (tab) => {
-    await sendToWebhook(tab.url, tab.title);
-  });
+  chrome.action.onClicked.addListener(tab => sendToWebhook(tab.url, tab.title));
 }
 
 // Handle context menu clicks
 if (typeof chrome !== 'undefined' && chrome.contextMenus && chrome.contextMenus.onClicked) {
-  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    const url = info.linkUrl || tab.url;
-    const title = tab.title;
-    await sendToWebhook(url, title);
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    sendToWebhook(info.linkUrl || tab.url, tab.title);
   });
 }
 
@@ -50,21 +46,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage)
       sendToWebhook(request.url, request.title)
         .then(() => sendResponse({ success: true }))
         .catch(error => sendResponse({ success: false, error: error.message }));
-      
-      // Return true to indicate async response
-      return true;
+      return true; // Indicate async response
     }
   });
 }
 
 // Handle notification button clicks
 if (typeof chrome !== 'undefined' && chrome.notifications && chrome.notifications.onButtonClicked) {
-  chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+  chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
     if (notificationId.startsWith('saveit-error') && buttonIndex === 0) {
-      // Open error details page
-      chrome.tabs.create({
-        url: chrome.runtime.getURL('error/error.html')
-      });
+      chrome.tabs.create({ url: chrome.runtime.getURL('error/error.html') });
     }
   });
 }
@@ -76,60 +67,38 @@ if (typeof chrome !== 'undefined' && chrome.notifications && chrome.notification
  */
 async function sendToWebhook(url, title) {
   try {
-    // Get webhook configuration using utils
+    // Get webhook configuration
     const { webhookUrl, apiKey } = await getWebhookConfig();
     
     if (!webhookUrl) {
-      showErrorNotification('No webhook URL configured', url);
+      showNotification(false, 'No webhook URL configured', url);
       return;
     }
 
-    // Prepare payload
-    const payload = {
-      url: url,
-      title: title,
-      timestamp: Date.now()
-    };
-
-    // Prepare request options
+    // Prepare payload & options
+    const payload = { url, title, timestamp: Date.now() };
     const options = {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     };
 
-    // Add authorization header if API key is provided
-    if (apiKey) {
-      options.headers['Authorization'] = `Bearer ${apiKey}`;
-    }
+    // Add authorization if provided
+    if (apiKey) options.headers['Authorization'] = `Bearer ${apiKey}`;
 
     // Send request with retry logic
     await fetchWithRetry(webhookUrl, options);
-    
-    // Show success notification
-    showSuccessNotification(title);
+    showNotification(true, title);
 
   } catch (error) {
-    // Enhanced error logging with response details
-    const errorData = {
-      url: url,
-      title: title,
-      error: error.message,
-      timestamp: Date.now()
-    };
+    // Log error with details
+    await logError({
+      url, title, error: error.message,
+      timestamp: Date.now(),
+      ...(error.responseDetails && { responseDetails: error.responseDetails })
+    });
 
-    // Include response details if available
-    if (error.responseDetails) {
-      errorData.responseDetails = error.responseDetails;
-    }
-
-    // Log error using utils
-    await logError(errorData);
-
-    // Show error notification
-    showErrorNotification(error.message, url);
+    showNotification(false, error.message, url);
   }
 }
 
@@ -166,11 +135,26 @@ function showErrorNotification(error, url) {
   }
 }
 
+/**
+ * Show notification - unified version
+ * @param {boolean} success - Whether operation was successful
+ * @param {string} message - Message to show
+ * @param {string} [url] - URL for error messages
+ */
+function showNotification(success, message, url) {
+  if (success) {
+    showSuccessNotification(message);
+  } else {
+    showErrorNotification(message, url);
+  }
+}
+
 // Export functions for testing
 export {
   sendToWebhook,
   showSuccessNotification,
-  showErrorNotification
+  showErrorNotification,
+  showNotification
 };
 
 // Export functions to global scope for Chrome extension context
@@ -178,8 +162,10 @@ if (typeof window !== 'undefined') {
   window.sendToWebhook = sendToWebhook;
   window.showSuccessNotification = showSuccessNotification;
   window.showErrorNotification = showErrorNotification;
+  window.showNotification = showNotification;
 } else if (typeof self !== 'undefined') {
   self.sendToWebhook = sendToWebhook;
   self.showSuccessNotification = showSuccessNotification;
   self.showErrorNotification = showErrorNotification;
+  self.showNotification = showNotification;
 }

@@ -20,16 +20,16 @@ async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
       if (!response.ok) {
         // Capture response details for error logging
         const responseText = await response.text().catch(() => 'Unable to read response');
-        const errorDetails = {
+        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        
+        error.responseDetails = {
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
           responseBody: responseText,
-          attempt: attempt
+          attempt
         };
         
-        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
-        error.responseDetails = errorDetails;
         throw error;
       }
       
@@ -37,7 +37,7 @@ async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
     } catch (error) {
       lastError = error;
       
-      // If this is not the last attempt, wait before retrying
+      // If not the last attempt, wait before retrying
       if (attempt < retries) {
         await new Promise(resolve => setTimeout(resolve, delay));
       }

@@ -22,7 +22,7 @@
   "jest": {
     "testEnvironment": "jsdom",
     "collectCoverage": true,
-    "coverageReporters": ["text", "text-lcov", "lcov"],
+    "coverageReporters": ["text", "text-lcov", "lcov", "cobertura", "json-summary"],
     "coverageDirectory": "coverage",
     "moduleFileExtensions": ["js"],
     "testMatch": ["**/__tests__/**/*.js"],
@@ -30,10 +30,10 @@
     "testTimeout": 10000,
     "transform": {},
     "collectCoverageFrom": [
-      "utils.js",
-      "background.js",
-      "popup/popup.js",
-      "options/options.js"
+      "**/*.js",
+      "!node_modules/**",
+      "!coverage/**",
+      "!__tests__/**"
     ]
   }
 }
