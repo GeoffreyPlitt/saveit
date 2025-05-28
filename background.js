@@ -86,7 +86,7 @@ async function sendToWebhook(url, title) {
     }
 
     // Send request with retry logic
-    const response = await fetchWithRetry(webhookUrl, options);
+    await fetchWithRetry(webhookUrl, options);
     
     // Show success notification
     showSuccessNotification(title);

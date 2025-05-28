@@ -78,21 +78,48 @@ async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
 
 ## Testing Requirements
 
-### Jest Test Setup
-- Use Jest for unit testing
+### Testing Architecture
+- Docker-based testing environment for consistent tests in all environments
+- Jest for unit testing with JSDOM environment
 - Test files in `__tests__/` directory
-- Focus on testing `utils.js` functions and storage operations
-- Mock Chrome APIs using `jest.mock()`
+- Comprehensive mocking of Chrome extension APIs
+
+### Docker Test Setup
+- `Dockerfile` defines the test environment
+- Docker commands are wrapped in npm scripts for convenience
+- Same Docker image used in both local development and CI
+
+### Running Tests
+```bash
+# Run tests in Docker (recommended)
+npm run docker:test
+
+# Run linting in Docker
+npm run docker:lint
+
+# Run tests with coverage in Docker
+npm run docker:coverage
+
+# Run tests locally (without Docker)
+npm test
+```
 
 ### GitHub Actions Integration
-- Run tests on every PR and push to main
-- Include codecov.io integration for coverage reporting
-- Save coverage report as `coverage.txt` artifact
+- Tests run automatically on every PR and push to main
+- Docker-based testing for consistency with local environment
+- Coverage report generated and saved as artifact
+- Workflow defined in `.github/workflows/tests.yml`
 
 ### Test Coverage Expectations
 - Target: >80% code coverage
+- Current coverage: 85%
 - Critical paths: webhook sending, retry logic, error handling
-- Mock all Chrome extension APIs in tests
+- All Chrome extension APIs mocked in tests
+
+### Key Testing Files
+- `__tests__/setup.js`: Mocks Chrome APIs and sets up test environment
+- `__tests__/utils.test.js`: Tests for utility functions
+- `__tests__/background.test.js`: Tests for background service worker
 
 ## Implementation Notes
 
@@ -145,25 +172,10 @@ chrome.notifications.create({
 
 ## Development Workflow
 
-### Phase Implementation
-1. **Phase 0**: Documentation and project setup ✅
-2. **Phase 1**: Manifest, basic structure, storage setup
-3. **Phase 2**: Context menu, webhook POST logic, retry mechanism
-4. **Phase 3**: Options page, popup, error details page
-5. **Phase 4**: Testing setup, Jest tests, GitHub Actions
-6. **Phase 5**: Optimization, Chrome Web Store preparation
-
 ### Git Workflow
-- Feature branches for each phase: `claude/phase-1`, `claude/phase-2`, etc.
+- Use feature branches for new functionality
 - Commit frequently with descriptive messages
-- Test functionality after each phase
 - Always run linting and tests before pushing
-
-### Before Completing Each Phase
-- [ ] Test extension functionality manually in Chrome
-- [ ] Run any available linting tools
-- [ ] Verify all files are properly committed
-- [ ] Update progress in GitHub issue comments
 
 ## Browser Compatibility
 - **Primary Target**: Chrome 88+ (Manifest V3 support)

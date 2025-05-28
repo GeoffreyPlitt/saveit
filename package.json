@@ -1,0 +1,31 @@
+{
+  "name": "saveit",
+  "version": "1.0.0",
+  "description": "Chrome extension to send URLs to a configured webhook",
+  "main": "background.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint .",
+    "build": "echo 'No build step required'",
+    "docker:test": "docker run --rm -v \"$(pwd):/app\" saveit-test npm test",
+    "docker:lint": "docker run --rm -v \"$(pwd):/app\" saveit-test npm run lint",
+    "docker:coverage": "docker run --rm -v \"$(pwd):/app\" saveit-test npm test -- --coverage"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.22.5",
+    "babel-jest": "^29.5.0",
+    "eslint": "^8.42.0",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "collectCoverage": true,
+    "coverageReporters": ["text", "text-lcov", "lcov"],
+    "coverageDirectory": "coverage",
+    "moduleFileExtensions": ["js"],
+    "testMatch": ["**/__tests__/**/*.js"],
+    "setupFilesAfterEnv": ["<rootDir>/__tests__/setup.js"],
+    "testTimeout": 10000
+  }
+}
