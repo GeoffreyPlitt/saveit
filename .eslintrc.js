@@ -19,7 +19,6 @@ module.exports = {
     'quotes': ['error', 'single', { 'avoidEscape': true }],
     'semi': ['error', 'always'],
     'no-unused-vars': ['error', { 
-      'varsIgnorePattern': 'fetchWithRetry|getWebhookConfig|saveWebhookConfig|logError|getLastError',
       'argsIgnorePattern': 'responseText' 
     }],
     'no-console': ['error', { allow: ['error', 'warn'] }]

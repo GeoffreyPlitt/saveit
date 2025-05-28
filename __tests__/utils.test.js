@@ -124,8 +124,21 @@ describe('fetchWithRetry', () => {
   });
 
   test('should handle non-ok response', async () => {
-    // Skip this test for now as it's inconsistent between environments
-    expect(true).toBe(true);
+    // Create a custom error for HTTP errors
+    const httpError = new Error('HTTP 401: Unauthorized');
+    httpError.responseDetails = {
+      status: 401,
+      statusText: 'Unauthorized'
+    };
+    
+    // Mock fetch to throw our custom error
+    fetch.mockRejectedValueOnce(httpError);
+    
+    // Test that fetchWithRetry passes through the error
+    await expect(fetchWithRetry(testUrl, testOptions, 1, 0))
+      .rejects.toEqual(httpError);
+    
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
 

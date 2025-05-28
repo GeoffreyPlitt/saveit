@@ -4,7 +4,7 @@
  * @fileoverview
  */
 
-// Use self/globalThis to ensure compatibility with both browser and service worker contexts
+// Self-executing function to avoid polluting the global namespace
 (function(global) {
   /**
    * Fetch with retry logic for robust webhook requests
@@ -92,7 +92,8 @@
     return lastError;
   }
 
-  // Expose utility functions to the global scope
+  // Export utility functions to the global scope
+  // This is the best approach for Chrome extensions that don't use module bundlers
   global.fetchWithRetry = fetchWithRetry;
   global.getWebhookConfig = getWebhookConfig;
   global.saveWebhookConfig = saveWebhookConfig;
