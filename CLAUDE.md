@@ -183,3 +183,7 @@ chrome.notifications.create({
 - Use event-driven programming patterns
 - Avoid polling or continuous background operations
 - Optimize icon file sizes for fast loading
+
+
+## Also
+- When I ask you to make branches for features/bugs, always create a PR when you're done.
