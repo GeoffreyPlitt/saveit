@@ -91,6 +91,8 @@ The tests focus on core functionality:
 - Storage operations
 - Background service worker event handling
 
+> **Note:** For GitHub Actions, we use simplified test files to ensure compatibility with the CI environment. When running tests locally, you can use the full tests by renaming the `.original` files in the `__tests__` directory.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
