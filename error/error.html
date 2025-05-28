@@ -161,7 +161,7 @@
         const timestamp = new Date(lastError.timestamp).toLocaleString();
         
         // Build error display
-        const errorHtml = `
+        let errorHtml = `
           <div class="error-card">
             <div class="error-field">
               <span class="field-label">Failed URL:</span>
@@ -182,8 +182,46 @@
               <span class="field-label">Timestamp:</span>
               <div class="field-value timestamp">${timestamp}</div>
             </div>
-          </div>
         `;
+        
+        // Add response details if available
+        if (lastError.responseDetails) {
+          errorHtml += `
+            <div class="error-field">
+              <span class="field-label">HTTP Status:</span>
+              <div class="field-value">${escapeHtml(lastError.responseDetails.status?.toString() || 'Unknown')}</div>
+            </div>
+          `;
+          
+          if (lastError.responseDetails.headers) {
+            errorHtml += `
+              <div class="error-field">
+                <span class="field-label">Response Headers:</span>
+                <div class="field-value">${escapeHtml(JSON.stringify(lastError.responseDetails.headers, null, 2))}</div>
+              </div>
+            `;
+          }
+          
+          if (lastError.responseDetails.body) {
+            errorHtml += `
+              <div class="error-field">
+                <span class="field-label">Response Body:</span>
+                <div class="field-value">${escapeHtml(lastError.responseDetails.body)}</div>
+              </div>
+            `;
+          }
+          
+          if (lastError.responseDetails.attempt) {
+            errorHtml += `
+              <div class="error-field">
+                <span class="field-label">Failed After Attempts:</span>
+                <div class="field-value">${escapeHtml(lastError.responseDetails.attempt?.toString() || 'Unknown')}</div>
+              </div>
+            `;
+          }
+        }
+        
+        errorHtml += `</div>`;
         
         document.getElementById('errorContent').innerHTML = errorHtml;
         
