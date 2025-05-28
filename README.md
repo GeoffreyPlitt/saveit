@@ -73,7 +73,22 @@ See [CLAUDE.md](./CLAUDE.md) for development guidelines and setup instructions.
 
 ### Testing
 
-We use Jest for unit testing. To run tests:
+We use Jest for unit testing with Docker to ensure consistent test environments both locally and in CI.
+
+#### Running Tests with Docker (Recommended)
+
+```bash
+# Run tests in Docker
+npm run docker:test
+
+# Run linting in Docker
+npm run docker:lint
+
+# Run tests with coverage in Docker
+npm run docker:coverage
+```
+
+#### Running Tests Locally (without Docker)
 
 ```bash
 # Install dependencies
@@ -82,16 +97,18 @@ npm install
 # Run tests
 npm test
 
+# Run linting
+npm run lint
+
 # Run tests with coverage report
 npm test -- --coverage
 ```
 
 The tests focus on core functionality:
-- `fetchWithRetry` retry mechanism
-- Storage operations
+- `fetchWithRetry` retry mechanism and retry logic
+- Chrome storage API interactions
 - Background service worker event handling
-
-> **Note:** For GitHub Actions, we use simplified test files to ensure compatibility with the CI environment. When running tests locally, you can use the full tests by renaming the `.original` files in the `__tests__` directory.
+- Webhook sending functionality
 
 ## License
 

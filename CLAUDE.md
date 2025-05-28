@@ -78,45 +78,48 @@ async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
 
 ## Testing Requirements
 
-### Jest Test Setup
-- Use Jest for unit testing
+### Testing Architecture
+- Docker-based testing environment for consistent tests in all environments
+- Jest for unit testing with JSDOM environment
 - Test files in `__tests__/` directory
-- Focus on testing `utils.js` functions and storage operations
-- Mock Chrome APIs in `__tests__/setup.js`
+- Comprehensive mocking of Chrome extension APIs
+
+### Docker Test Setup
+- `Dockerfile` defines the test environment
+- `docker-compose.yml` provides easy-to-use test commands
+- Same Docker image used in both local development and CI
 
 ### Running Tests
 ```bash
-# Install dependencies
-npm install
+# Run tests in Docker (recommended)
+npm run docker:test
 
-# Run all tests
+# Run linting in Docker
+npm run docker:lint
+
+# Run tests with coverage in Docker
+npm run docker:coverage
+
+# Run tests locally (without Docker)
 npm test
-
-# Run tests with coverage report
-npm test -- --coverage
 ```
 
 ### GitHub Actions Integration
 - Tests run automatically on every PR and push to main
-- Coverage report saved as artifact
+- Docker-based testing for consistency with local environment
+- Coverage report generated and saved as artifact
 - Workflow defined in `.github/workflows/tests.yml`
 
 ### Test Coverage Expectations
+- Target: >80% code coverage
 - Current coverage: 85%
 - Critical paths: webhook sending, retry logic, error handling
 - All Chrome extension APIs mocked in tests
 
-### Key Testing Commands
-```bash
-# Run linting check
-npm run lint
-
-# Run tests with watching enabled
-npm test -- --watch
-
-# Run specific test file
-npm test -- __tests__/utils.test.js
-```
+### Key Testing Files
+- `__tests__/setup.js`: Mocks Chrome APIs and sets up test environment
+- `__tests__/utils.test.js`: Tests for utility functions
+- `__tests__/background.test.js`: Tests for background service worker
 
 ## Implementation Notes
 

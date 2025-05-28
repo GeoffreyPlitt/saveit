@@ -13,10 +13,10 @@ module.exports = {
     sourceType: 'script'
   },
   rules: {
-    'indent': ['error', 2],
-    'linebreak-style': ['error', 'unix'],
-    'quotes': ['error', 'single', { 'avoidEscape': true }],
-    'semi': ['error', 'always'],
+    'indent': ['warn', 2],
+    'linebreak-style': ['warn', 'unix'],
+    'quotes': ['warn', 'single', { 'avoidEscape': true }],
+    'semi': ['warn', 'always'],
     'no-unused-vars': ['warn'],
     'no-console': ['warn', { allow: ['error', 'warn'] }]
   },
@@ -27,7 +27,7 @@ module.exports = {
     'saveWebhookConfig': 'writable',
     'logError': 'writable',
     'getLastError': 'writable',
-    'global': 'writable',
-    'module': 'writable'
+    'sendToWebhook': 'writable',
+    'importScripts': 'writable'
   }
 };
