@@ -33,22 +33,6 @@ A minimalist Chrome extension that sends the current page or right-clicked link 
 }
 ```
 
-### File Structure
-```
-saveit/
-├── manifest.json
-├── background.js      # Context menu, POST, retries
-├── options/
-│   ├── options.html   # Webhook URL/token input
-│   └── options.js
-├── popup/
-│   ├── popup.html     # "Options" button
-│   └── popup.js
-├── error/
-│   └── error.html     # Error details page
-├── icons/             # Extension icons
-└── utils.js           # Shared functions (fetchWithRetry)
-```
 
 ## Installation
 
