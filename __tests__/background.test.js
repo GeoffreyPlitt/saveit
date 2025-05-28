@@ -7,26 +7,15 @@
 // Import Jest globals
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
-// Create real mock functions
-const mockFetchWithRetry = jest.fn(() => Promise.resolve({}));
-const mockGetWebhookConfig = jest.fn(() => Promise.resolve({
-  webhookUrl: 'https://example.com/webhook',
-  apiKey: 'test-api-key'
-}));
-const mockLogError = jest.fn(() => Promise.resolve());
-const mockGetLastError = jest.fn(() => Promise.resolve(null));
+// Import the necessary utility functions for showNotification
+import { 
+  showSuccessNotification, 
+  showErrorNotification,
+  showNotification
+} from '../background.js';
 
-// Mock the entire utils module - IMPORTANT: This must be before importing the tested module
-jest.mock('../utils.js', () => ({
-  __esModule: true,
-  fetchWithRetry: mockFetchWithRetry,
-  getWebhookConfig: mockGetWebhookConfig,
-  logError: mockLogError,
-  getLastError: mockGetLastError
-}));
-
-// Create a modified version of background.js for testing
-const originalSendToWebhook = jest.fn(async (url, title) => {
+// Create the actual implementation of sendToWebhook for testing
+async function testSendToWebhook(url, title) {
   try {
     // Get webhook configuration
     const { webhookUrl, apiKey } = await mockGetWebhookConfig();
@@ -61,26 +50,39 @@ const originalSendToWebhook = jest.fn(async (url, title) => {
 
     showNotification(false, error.message, url);
   }
+}
+
+// Create mock functions for utils.js
+const mockFetchWithRetry = jest.fn(() => Promise.resolve({}));
+const mockGetWebhookConfig = jest.fn(() => Promise.resolve({
+  webhookUrl: 'https://example.com/webhook',
+  apiKey: 'test-api-key'
+}));
+const mockLogError = jest.fn(() => Promise.resolve());
+const mockGetLastError = jest.fn(() => Promise.resolve(null));
+
+// Mock the utils module - must be before importing background.js
+jest.mock('../utils.js', () => ({
+  __esModule: true,
+  fetchWithRetry: mockFetchWithRetry,
+  getWebhookConfig: mockGetWebhookConfig,
+  logError: mockLogError,
+  getLastError: mockGetLastError
+}));
+
+// Mock background.js - we only need to test the notification functions from the actual module
+jest.mock('../background.js', () => {
+  return {
+    __esModule: true,
+    sendToWebhook: testSendToWebhook,
+    showSuccessNotification: jest.requireActual('../background.js').showSuccessNotification,
+    showErrorNotification: jest.requireActual('../background.js').showErrorNotification,
+    showNotification: jest.requireActual('../background.js').showNotification
+  };
 });
 
-// Replace the original sendToWebhook with our test version
-jest.mock('../background.js', () => {
-  const originalModule = jest.requireActual('../background.js');
-  return {
-    ...originalModule,
-    sendToWebhook: originalSendToWebhook
-  };
-}, { virtual: true });
-
-// Import functions from background.js for testing
-import { 
-  showSuccessNotification, 
-  showErrorNotification,
-  showNotification
-} from '../background.js';
-
-// Use our mocked function instead of the imported one
-const sendToWebhook = originalSendToWebhook;
+// Use our test implementation as sendToWebhook
+const sendToWebhook = testSendToWebhook;
 
 describe('Background Service Worker', () => {
   // Test variables
@@ -92,6 +94,7 @@ describe('Background Service Worker', () => {
   });
   
   describe('sendToWebhook function', () => {
+    
     test('should send a webhook request with correct payload', async () => {
       // Arrange
       mockGetWebhookConfig.mockResolvedValue({
