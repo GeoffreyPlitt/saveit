@@ -51,6 +51,8 @@ This file contains development guidelines and tips for working on the SaveIt Chr
   docker run --rm -v "$(pwd):/app" -w /app saveit-test npm test
   ```
 - Mount the source directory as a volume and use `-w /app` for correct working directory
+- IMPORTANT: Always run node/npm/npx commands inside Docker, not on the local machine
+- This ensures consistent execution environment for all contributors
 
 ## Chrome Extension Development Best Practices
 
@@ -162,14 +164,25 @@ npm test
 
 ### Test Coverage Expectations
 - Target: >80% code coverage
-- Current coverage: 85%
+- Current coverage: ~70% overall
+  - utils.js: ~80% line coverage
+  - popup/popup.js: ~89% line coverage  
+  - options/options.js: ~79% line coverage
+  - background.js: ~43% line coverage (needs improvement)
 - Critical paths: webhook sending, retry logic, error handling
 - All Chrome extension APIs mocked in tests
+
+### Known Testing Issues
+- Several tests in background.test.js are skipped due to mocking issues
+- ES Module mocking requires careful ordering of imports and mocks
+- The mock must be defined before the tested module is imported
+- To improve background.js coverage, the mocking approach needs to be fixed
 
 ### Key Testing Files
 - `__tests__/setup.js`: Mocks Chrome APIs and sets up test environment
 - `__tests__/utils.test.js`: Tests for utility functions
-- `__tests__/background.test.js`: Tests for background service worker
+- `__tests__/background.test.js`: Tests for background service worker (several skipped tests)
+- `__tests__/background_direct.test.js`: Simplified tests for background.js
 
 ## Implementation Notes
 

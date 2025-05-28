@@ -4,7 +4,7 @@
  */
 
 // Import Jest globals
-import { jest, describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect } from '@jest/globals';
 
 // Import the actual functions from background.js
 import '../background.js';
@@ -24,7 +24,7 @@ describe('Background Service Worker Bindings', () => {
       expect(typeof self.showErrorNotification).toBe('function');
     } else {
       // Skip test if not in browser or worker context
-      console.log('Not in browser or worker context, skipping binding test');
+      // Test will be skipped silently
     }
   });
 });

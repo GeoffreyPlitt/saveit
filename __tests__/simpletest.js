@@ -2,5 +2,5 @@
  * A very simple test script that doesn't use modules
  */
 
-console.log('Simple test running!');
-console.log('Node version:', process.version);
+// This file is used to test the basic functionality of the test runner
+// without using any modules or console.log statements
