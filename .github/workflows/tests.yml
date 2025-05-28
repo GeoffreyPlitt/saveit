@@ -31,11 +31,12 @@ jobs:
       run: docker run --rm saveit-test npm run lint
 
     - name: Run tests
-      run: docker run --rm saveit-test node --version && docker run --rm saveit-test npm test || true
+      run: docker run --rm saveit-test npm test
 
     - name: Generate coverage report
       run: |
-        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage --coverageReporters=lcov || true
+        mkdir -p coverage
+        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage --coverageReporters=lcov
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

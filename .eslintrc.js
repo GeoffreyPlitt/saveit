@@ -13,13 +13,13 @@ module.exports = {
     sourceType: 'script'
   },
   rules: {
-    // Relaxed rules for testing environment
-    'indent': 'off',
-    'linebreak-style': 'off',
-    'quotes': 'off',
-    'semi': 'off',
-    'no-unused-vars': 'off',
-    'no-console': 'off'
+    // Restored stricter rules with warnings instead of errors to maintain compatibility
+    'indent': ['warn', 2],
+    'linebreak-style': ['warn', 'unix'],
+    'quotes': ['warn', 'single', { 'avoidEscape': true }],
+    'semi': ['warn', 'always'],
+    'no-unused-vars': ['warn'],
+    'no-console': ['warn', { allow: ['error', 'warn'] }]
   },
   globals: {
     // Add globals from utils.js that are used in other files
