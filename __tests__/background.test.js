@@ -27,7 +27,6 @@ jest.mock('../utils.js', () => ({
 
 // Import functions from background.js for testing
 import { 
-  sendToWebhook, 
   showSuccessNotification, 
   showErrorNotification 
 } from '../background.js';
