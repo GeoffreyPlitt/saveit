@@ -109,6 +109,56 @@
       color: #6b7280;
       margin-top: 4px;
     }
+    
+    .input-validation {
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+    
+    .input-validation.show {
+      display: block;
+    }
+    
+    .input-validation.valid {
+      color: #166534;
+    }
+    
+    .input-validation.invalid {
+      color: #991b1b;
+    }
+    
+    input.valid {
+      border-color: #22c55e;
+    }
+    
+    input.invalid {
+      border-color: #ef4444;
+    }
+    
+    .feature-info {
+      background-color: #f0f9ff;
+      border: 1px solid #0ea5e9;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .feature-info h3 {
+      margin: 0 0 8px 0;
+      color: #0369a1;
+      font-size: 16px;
+    }
+    
+    .feature-info ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+    
+    .feature-info li {
+      margin-bottom: 4px;
+      color: #0369a1;
+    }
   </style>
 </head>
 <body>
@@ -116,6 +166,17 @@
     <img src="../icons/icon-48.png" alt="SaveIt">
     <h1>SaveIt Configuration</h1>
     <p>Configure your webhook settings to start saving URLs</p>
+  </div>
+
+  <div class="feature-info">
+    <h3>How SaveIt Works</h3>
+    <ul>
+      <li><strong>Right-click</strong> on any link and select "Send to Webhook"</li>
+      <li><strong>Click the extension icon</strong> to send the current page</li>
+      <li>URLs are sent with title and timestamp to your webhook</li>
+      <li>Automatic retry (3 attempts) on failures</li>
+      <li>Success/error notifications with detailed error info</li>
+    </ul>
   </div>
 
   <form id="optionsForm">
@@ -128,6 +189,7 @@
         required
       >
       <div class="help-text">The endpoint where URLs will be sent via POST request</div>
+      <div id="webhookUrlValidation" class="input-validation"></div>
     </div>
 
     <div class="form-group">
@@ -138,6 +200,7 @@
         placeholder="your-bearer-token-here"
       >
       <div class="help-text">Bearer token for webhook authentication (leave empty if not required)</div>
+      <div id="apiKeyValidation" class="input-validation"></div>
     </div>
 
     <div class="button-group">
