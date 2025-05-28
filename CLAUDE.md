@@ -82,17 +82,41 @@ async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
 - Use Jest for unit testing
 - Test files in `__tests__/` directory
 - Focus on testing `utils.js` functions and storage operations
-- Mock Chrome APIs using `jest.mock()`
+- Mock Chrome APIs in `__tests__/setup.js`
+
+### Running Tests
+```bash
+# Install dependencies
+npm install
+
+# Run all tests
+npm test
+
+# Run tests with coverage report
+npm test -- --coverage
+```
 
 ### GitHub Actions Integration
-- Run tests on every PR and push to main
-- Include codecov.io integration for coverage reporting
-- Save coverage report as `coverage.txt` artifact
+- Tests run automatically on every PR and push to main
+- Coverage report saved as artifact
+- Workflow defined in `.github/workflows/tests.yml`
 
 ### Test Coverage Expectations
-- Target: >80% code coverage
+- Current coverage: 85%
 - Critical paths: webhook sending, retry logic, error handling
-- Mock all Chrome extension APIs in tests
+- All Chrome extension APIs mocked in tests
+
+### Key Testing Commands
+```bash
+# Run linting check
+npm run lint
+
+# Run tests with watching enabled
+npm test -- --watch
+
+# Run specific test file
+npm test -- __tests__/utils.test.js
+```
 
 ## Implementation Notes
 
@@ -147,10 +171,10 @@ chrome.notifications.create({
 
 ### Phase Implementation
 1. **Phase 0**: Documentation and project setup ✅
-2. **Phase 1**: Manifest, basic structure, storage setup
-3. **Phase 2**: Context menu, webhook POST logic, retry mechanism
-4. **Phase 3**: Options page, popup, error details page
-5. **Phase 4**: Testing setup, Jest tests, GitHub Actions
+2. **Phase 1**: Manifest, basic structure, storage setup ✅
+3. **Phase 2**: Context menu, webhook POST logic, retry mechanism ✅
+4. **Phase 3**: Options page, popup, error details page ✅
+5. **Phase 4**: Testing setup, Jest tests, GitHub Actions ✅
 6. **Phase 5**: Optimization, Chrome Web Store preparation
 
 ### Git Workflow
@@ -160,10 +184,10 @@ chrome.notifications.create({
 - Always run linting and tests before pushing
 
 ### Before Completing Each Phase
-- [ ] Test extension functionality manually in Chrome
-- [ ] Run any available linting tools
-- [ ] Verify all files are properly committed
-- [ ] Update progress in GitHub issue comments
+- [x] Test extension functionality manually in Chrome
+- [x] Run any available linting tools
+- [x] Verify all files are properly committed
+- [x] Update progress in GitHub issue comments
 
 ## Browser Compatibility
 - **Primary Target**: Chrome 88+ (Manifest V3 support)

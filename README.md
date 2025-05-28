@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Coming%20Soon-blue)](https://chrome.google.com/webstore)
 [![Tests](https://github.com/GeoffreyPlitt/saveit/workflows/Tests/badge.svg)](https://github.com/GeoffreyPlitt/saveit/actions)
-[![Coverage](https://img.shields.io/badge/coverage-0%25-red)](https://github.com/GeoffreyPlitt/saveit)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://github.com/GeoffreyPlitt/saveit)
 
 A minimalist Chrome extension that sends the current page or right-clicked link URL, title, and timestamp to a user-configured webhook as JSON, with retries and error toasts.
 
@@ -70,6 +70,26 @@ A minimalist Chrome extension that sends the current page or right-clicked link 
 ## Development
 
 See [CLAUDE.md](./CLAUDE.md) for development guidelines and setup instructions.
+
+### Testing
+
+We use Jest for unit testing. To run tests:
+
+```bash
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Run tests with coverage report
+npm test -- --coverage
+```
+
+The tests focus on core functionality:
+- `fetchWithRetry` retry mechanism
+- Storage operations
+- Background service worker event handling
 
 ## License
 
