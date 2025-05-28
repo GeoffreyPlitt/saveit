@@ -1,12 +1,21 @@
 /**
  * SaveIt Popup JavaScript
- * Handles popup interface interactions
  */
 
+// Cache DOM elements
+const elements = {};
+
 document.addEventListener('DOMContentLoaded', async () => {
+  // Cache DOM elements
+  ['sendCurrentPage', 'openOptions', 'status'].forEach(id => 
+    elements[id] = document.getElementById(id));
+  
   // Setup event listeners
-  document.getElementById('sendCurrentPage').addEventListener('click', sendCurrentPage);
-  document.getElementById('openOptions').addEventListener('click', openOptions);
+  elements.sendCurrentPage.addEventListener('click', sendCurrentPage);
+  elements.openOptions.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+    window.close();
+  });
   
   // Check if webhook is configured
   await checkConfiguration();
@@ -19,73 +28,59 @@ async function sendCurrentPage() {
   try {
     // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    if (!tab) {
-      showStatus('Unable to get current tab', 'error');
-      return;
-    }
+    if (!tab) return showStatus('Unable to get current tab', 'error');
     
     // Check webhook configuration
     const { webhookUrl } = await chrome.storage.sync.get(['webhookUrl']);
-    
-    if (!webhookUrl) {
-      showStatus('Please configure webhook first', 'warning');
-      return;
-    }
+    if (!webhookUrl) return showStatus('Please configure webhook first', 'warning');
     
     // Show loading state
-    const button = document.getElementById('sendCurrentPage');
-    const originalText = button.textContent;
-    button.textContent = 'Sending...';
-    button.disabled = true;
+    setButtonState(true, 'Sending...');
     
-    // Send message to background script to handle the webhook request
+    // Send message to background script
     chrome.runtime.sendMessage({
       action: 'sendToWebhook',
       url: tab.url,
       title: tab.title
-    }, (response) => {
-      // Restore button state
-      button.textContent = originalText;
-      button.disabled = false;
-      
-      if (response && response.success) {
-        showStatus('Sent successfully!', 'success');
-        // Close popup after successful send
-        setTimeout(() => window.close(), 1000);
-      } else {
-        showStatus('Failed to send', 'error');
-      }
-    });
-    
+    }, handleResponse);
   } catch (error) {
     showStatus('Error: ' + error.message, 'error');
-    
-    // Restore button state
-    const button = document.getElementById('sendCurrentPage');
-    button.textContent = 'Send Current Page';
-    button.disabled = false;
+    setButtonState(false);
   }
 }
 
 /**
- * Open options page
+ * Handle response from background script
  */
-function openOptions() {
-  chrome.runtime.openOptionsPage();
-  window.close();
+function handleResponse(response) {
+  setButtonState(false);
+  
+  if (response && response.success) {
+    showStatus('Sent successfully!', 'success');
+    setTimeout(() => window.close(), 1000);
+  } else {
+    showStatus('Failed to send', 'error');
+  }
 }
 
 /**
- * Check if webhook is configured and update UI accordingly
+ * Set button state (loading/normal)
+ */
+function setButtonState(loading, loadingText = 'Sending...') {
+  const button = elements.sendCurrentPage;
+  button.textContent = loading ? loadingText : 'Send Current Page';
+  button.disabled = loading;
+}
+
+/**
+ * Check if webhook is configured
  */
 async function checkConfiguration() {
   try {
     const { webhookUrl } = await chrome.storage.sync.get(['webhookUrl']);
-    
     if (!webhookUrl) {
       showStatus('Webhook not configured', 'warning');
-      document.getElementById('sendCurrentPage').disabled = true;
+      elements.sendCurrentPage.disabled = true;
     }
   } catch (error) {
     showStatus('Unable to check configuration', 'error');
@@ -94,17 +89,12 @@ async function checkConfiguration() {
 
 /**
  * Show status message
- * @param {string} message - Status message
- * @param {string} type - Message type ('success', 'error', or 'warning')
  */
 function showStatus(message, type) {
-  const statusDiv = document.getElementById('status');
-  statusDiv.textContent = message;
-  statusDiv.className = `status ${type}`;
-  statusDiv.style.display = 'block';
+  elements.status.textContent = message;
+  elements.status.className = `status ${type}`;
+  elements.status.style.display = 'block';
   
-  // Hide status after 3 seconds for popup
-  setTimeout(() => {
-    statusDiv.style.display = 'none';
-  }, 3000);
+  // Hide status after 3 seconds
+  setTimeout(() => elements.status.style.display = 'none', 3000);
 }
