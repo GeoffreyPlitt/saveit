@@ -2,11 +2,14 @@
  * Test setup file for mocking Chrome extension APIs
  */
 
+// Import Jest globals
+import { jest, describe, test, expect } from '@jest/globals';
+
 // Simple test to avoid Jest error "Your test suite must contain at least one test"
 describe('Test setup', () => {
   test('Chrome API mocks are defined', () => {
-    expect(chrome).toBeDefined();
-    expect(chrome.storage).toBeDefined();
+    expect(global.chrome).toBeDefined();
+    expect(global.chrome.storage).toBeDefined();
   });
 });
 
@@ -25,7 +28,8 @@ global.chrome = {
   runtime: {
     getURL: jest.fn(path => `chrome-extension://mock-id/${path}`),
     onInstalled: { addListener: jest.fn() },
-    onMessage: { addListener: jest.fn() }
+    onMessage: { addListener: jest.fn() },
+    openOptionsPage: jest.fn()
   },
   notifications: {
     create: jest.fn(),
@@ -42,6 +46,58 @@ global.chrome = {
     create: jest.fn(),
     query: jest.fn()
   }
+};
+
+// Mock window functions
+global.window = global.window || {
+  close: jest.fn(),
+  setTimeout: global.setTimeout
+};
+
+// Mock DOM Environment
+if (!global.document) {
+  global.document = {
+    addEventListener: jest.fn(),
+    getElementById: jest.fn(),
+    querySelector: jest.fn(),
+    querySelectorAll: jest.fn(),
+    createElement: jest.fn(),
+    body: {
+      appendChild: jest.fn()
+    }
+  };
+}
+
+// Create mock elements for DOM interactions
+const createMockElement = (id, tagName = 'div') => {
+  return {
+    id,
+    tagName,
+    textContent: '',
+    className: '',
+    style: {
+      display: 'none'
+    },
+    value: '',
+    disabled: false,
+    addEventListener: jest.fn(),
+    getAttribute: jest.fn(),
+    setAttribute: jest.fn()
+  };
+};
+
+// Mock document functions
+document.getElementById = jest.fn(id => {
+  return createMockElement(id);
+});
+
+document.createElement = jest.fn(tagName => {
+  return createMockElement('', tagName);
+});
+
+// Mock location
+global.location = {
+  href: 'chrome-extension://mock-id/popup.html'
 };
 
 // Mock importScripts for background.js
@@ -101,6 +157,21 @@ beforeEach(() => {
   
   // Default implementation for notifications.create
   chrome.notifications.create.mockImplementation(() => Promise.resolve());
+  
+  // Default implementation for tabs.query
+  chrome.tabs.query.mockResolvedValue([
+    { url: 'https://example.com', title: 'Example Page' }
+  ]);
+  
+  // Default implementation for runtime.sendMessage
+  if (chrome.runtime.sendMessage && typeof chrome.runtime.sendMessage.mockImplementation === 'function') {
+    chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+      if (callback) {
+        callback({ success: true });
+      }
+      return true;
+    });
+  }
 });
 
 // Mock fetch API
@@ -126,3 +197,33 @@ global.Response = class Response {
     }
   }
 };
+
+// Mock URL constructor if not already defined in test
+if (!global.URL) {
+  global.URL = class URL {
+    constructor(url) {
+      if (!url || typeof url !== 'string' || !url.includes('://')) {
+        throw new Error('Invalid URL');
+      }
+      this.href = url;
+      this.protocol = url.startsWith('https:') ? 'https:' : 'http:';
+      this.hostname = url.split('://')[1].split('/')[0];
+      this.pathname = '/' + (url.split('://')[1].split('/').slice(1).join('/') || '');
+    }
+  };
+}
+
+// Mock AbortController if not already defined
+if (!global.AbortController) {
+  global.AbortController = class AbortController {
+    constructor() {
+      this.signal = { aborted: false };
+    }
+    abort() {
+      this.signal.aborted = true;
+    }
+  };
+}
+
+// Load the actual modules in popup.test.js and options.test.js instead of here
+// This will trigger coverage collection when those tests run

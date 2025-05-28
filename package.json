@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "Chrome extension to send URLs to a configured webhook",
   "main": "background.js",
+  "type": "module",
   "scripts": {
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.js",
     "lint": "eslint .",
     "build": "echo 'No build step required'",
     "docker:test": "docker run --rm -v \"$(pwd):/app\" saveit-test npm test",
@@ -27,6 +28,7 @@
     "testMatch": ["**/__tests__/**/*.js"],
     "setupFilesAfterEnv": ["<rootDir>/__tests__/setup.js"],
     "testTimeout": 10000,
+    "transform": {},
     "collectCoverageFrom": [
       "**/*.js",
       "!node_modules/**",

@@ -2,68 +2,17 @@
  * Tests for utils.js functionality
  */
 
-// Import functions directly by defining them here
-// These match the function signatures from utils.js
-async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
-  let lastError;
-  
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-      
-      if (!response.ok) {
-        // Capture response details for error logging
-        const responseText = await response.text().catch(() => 'Unable to read response');
-        const errorDetails = {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          responseBody: responseText,
-          attempt: attempt
-        };
-        
-        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
-        error.responseDetails = errorDetails;
-        throw error;
-      }
-      
-      return response;
-    } catch (error) {
-      lastError = error;
-      
-      // If this is not the last attempt, wait before retrying
-      if (attempt < retries) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  // All retries exhausted, throw the last error
-  throw lastError;
-}
+// Import Jest globals
+import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
-async function getWebhookConfig() {
-  const { webhookUrl, apiKey } = await chrome.storage.sync.get(['webhookUrl', 'apiKey']);
-  return { webhookUrl, apiKey };
-}
-
-async function saveWebhookConfig(webhookUrl, apiKey) {
-  await chrome.storage.sync.set({ webhookUrl, apiKey });
-}
-
-async function logError(errorDetails) {
-  await chrome.storage.local.set({ 
-    lastError: { 
-      ...errorDetails, 
-      timestamp: Date.now() 
-    } 
-  });
-}
-
-async function getLastError() {
-  const { lastError } = await chrome.storage.local.get(['lastError']);
-  return lastError;
-}
+// Import the actual functions from utils.js
+import { 
+  fetchWithRetry,
+  getWebhookConfig,
+  saveWebhookConfig,
+  logError,
+  getLastError
+} from '../utils.js';
 
 describe('fetchWithRetry', () => {
   // Setup test variables
@@ -124,19 +73,16 @@ describe('fetchWithRetry', () => {
   });
 
   test('should handle non-ok response', async () => {
-    // Create a custom error for HTTP errors
-    const httpError = new Error('HTTP 401: Unauthorized');
-    httpError.responseDetails = {
+    // Mock a non-OK response
+    fetch.mockResolvedValueOnce(new Response('{"error":"Unauthorized"}', { 
       status: 401,
-      statusText: 'Unauthorized'
-    };
+      statusText: 'Unauthorized',
+      ok: false
+    }));
     
-    // Mock fetch to throw our custom error
-    fetch.mockRejectedValueOnce(httpError);
-    
-    // Test that fetchWithRetry passes through the error
+    // Expect the function to throw with HTTP error
     await expect(fetchWithRetry(testUrl, testOptions, 1, 0))
-      .rejects.toEqual(httpError);
+      .rejects.toThrow('HTTP 401: Unauthorized');
     
     expect(fetch).toHaveBeenCalledTimes(1);
   });

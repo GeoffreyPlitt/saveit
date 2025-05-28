@@ -2,6 +2,58 @@
 
 This file contains development guidelines and tips for working on the SaveIt Chrome Extension project.
 
+## Testing Guidelines and Lessons Learned
+
+### ES Module Testing in Chrome Extensions
+- Chrome extensions traditionally don't use ES modules, but we can use them for testing
+- Key patterns in our implementation:
+  ```javascript
+  // Export for testing
+  export { functionA, functionB };
+  
+  // Make available in global scope for Chrome extension context
+  if (typeof window !== 'undefined') {
+    window.functionA = functionA;
+  } else if (typeof self !== 'undefined') {
+    self.functionA = functionA;
+  }
+  ```
+- Conditional Chrome API usage to support testing context:
+  ```javascript
+  if (typeof chrome !== 'undefined' && chrome.runtime) {
+    // Chrome API code here
+  }
+  ```
+
+### Jest Mocking Best Practices
+- Mock modules before importing the code that uses them:
+  ```javascript
+  // Create mock functions
+  const mockFetchWithRetry = jest.fn();
+  
+  // Mock the module
+  jest.mock('../utils.js', () => ({
+    __esModule: true,
+    fetchWithRetry: mockFetchWithRetry
+  }));
+  
+  // Now import the tested module
+  import { testedFunction } from '../module-to-test.js';
+  ```
+- "Cannot assign to read only property" error means you're trying to spy on an imported ES module property - use the module mocking approach above instead
+- For DOM testing, set up elements before importing modules that interact with the DOM
+
+### Docker Testing Best Practices
+- NEVER run Docker-in-Docker - it adds complexity and causes permission issues
+- For testing with Docker:
+  ```bash
+  # Run tests directly in Docker
+  docker run --rm -v "$(pwd):/app" -w /app saveit-test npm test
+  ```
+- Mount the source directory as a volume and use `-w /app` for correct working directory
+- IMPORTANT: Always run node/npm/npx commands inside Docker, not on the local machine
+- This ensures consistent execution environment for all contributors
+
 ## Chrome Extension Development Best Practices
 
 ### Manifest V3 Requirements
@@ -112,14 +164,25 @@ npm test
 
 ### Test Coverage Expectations
 - Target: >80% code coverage
-- Current coverage: 85%
+- Current coverage: ~70% overall
+  - utils.js: ~80% line coverage
+  - popup/popup.js: ~89% line coverage  
+  - options/options.js: ~79% line coverage
+  - background.js: ~43% line coverage (needs improvement)
 - Critical paths: webhook sending, retry logic, error handling
 - All Chrome extension APIs mocked in tests
+
+### Known Testing Issues
+- Several tests in background.test.js are skipped due to mocking issues
+- ES Module mocking requires careful ordering of imports and mocks
+- The mock must be defined before the tested module is imported
+- To improve background.js coverage, the mocking approach needs to be fixed
 
 ### Key Testing Files
 - `__tests__/setup.js`: Mocks Chrome APIs and sets up test environment
 - `__tests__/utils.test.js`: Tests for utility functions
-- `__tests__/background.test.js`: Tests for background service worker
+- `__tests__/background.test.js`: Tests for background service worker (several skipped tests)
+- `__tests__/background_direct.test.js`: Simplified tests for background.js
 
 ## Implementation Notes
 
