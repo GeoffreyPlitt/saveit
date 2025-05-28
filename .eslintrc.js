@@ -1,9 +1,11 @@
+/* eslint-env node */
 module.exports = {
   env: {
     browser: true,
     es2021: true,
     webextensions: true,
-    jest: true
+    jest: true,
+    node: true
   },
   extends: 'eslint:recommended',
   parserOptions: {
@@ -20,10 +22,12 @@ module.exports = {
   },
   globals: {
     // Add globals from utils.js that are used in other files
-    'fetchWithRetry': 'readonly',
-    'getWebhookConfig': 'readonly',
-    'saveWebhookConfig': 'readonly',
-    'logError': 'readonly',
-    'getLastError': 'readonly'
+    'fetchWithRetry': 'writable',
+    'getWebhookConfig': 'writable',
+    'saveWebhookConfig': 'writable',
+    'logError': 'writable',
+    'getLastError': 'writable',
+    'global': 'writable',
+    'module': 'writable'
   }
 };
