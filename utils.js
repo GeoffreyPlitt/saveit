@@ -11,19 +11,41 @@
  * @returns {Promise<Response>} Fetch response
  */
 async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        // Capture response details for error logging
+        const responseText = await response.text().catch(() => 'Unable to read response');
+        const errorDetails = {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          responseBody: responseText,
+          attempt: attempt
+        };
+        
+        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        error.responseDetails = errorDetails;
+        throw error;
+      }
+      
+      return response;
+    } catch (error) {
+      lastError = error;
+      
+      // If this is not the last attempt, wait before retrying
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-    return response;
-  } catch (error) {
-    if (retries > 1) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries - 1, delay);
-    }
-    throw error;
   }
+  
+  // All retries exhausted, throw the last error
+  throw lastError;
 }
 
 /**
