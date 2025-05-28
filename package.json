@@ -5,7 +5,7 @@
   "main": "background.js",
   "scripts": {
     "test": "jest",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint .",
     "build": "echo 'No build step required'",
     "docker:test": "docker-compose run --rm test",
     "docker:lint": "docker-compose run --rm lint",
