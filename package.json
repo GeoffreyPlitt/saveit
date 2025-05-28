@@ -21,11 +21,17 @@
   "jest": {
     "testEnvironment": "jsdom",
     "collectCoverage": true,
-    "coverageReporters": ["text", "text-lcov", "lcov"],
+    "coverageReporters": ["text", "text-lcov", "lcov", "cobertura", "json-summary"],
     "coverageDirectory": "coverage",
     "moduleFileExtensions": ["js"],
     "testMatch": ["**/__tests__/**/*.js"],
     "setupFilesAfterEnv": ["<rootDir>/__tests__/setup.js"],
-    "testTimeout": 10000
+    "testTimeout": 10000,
+    "collectCoverageFrom": [
+      "**/*.js",
+      "!node_modules/**",
+      "!coverage/**",
+      "!__tests__/**"
+    ]
   }
 }
