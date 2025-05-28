@@ -125,10 +125,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Roadmap
+## Future Development
 
-- [ ] Chrome Web Store publication
-- [ ] Custom retry configurations
-- [ ] Webhook response logging
-- [ ] Bulk URL processing
-- [ ] Export/import settings
+We have comprehensive plans for the future development of SaveIt:
+
+- **[ROADMAP.md](./ROADMAP.md)**: Detailed timeline and priorities for upcoming versions
+- **[FUTURE.md](./FUTURE.md)**: Comprehensive list of potential improvements and feature enhancements
+- **[OPTIMIZATION.md](./OPTIMIZATION.md)**: Analysis and recommendations for code optimization
+- **[STORE_PUBLICATION.md](./STORE_PUBLICATION.md)**: Guide for publishing to the Chrome Web Store
+
+### Next Steps
+
+- Chrome Web Store publication
+- Configurable retry settings
+- Offline mode with queue system
+- Dark mode support
+- Custom data fields in webhook payload

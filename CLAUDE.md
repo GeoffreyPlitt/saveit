@@ -177,6 +177,12 @@ chrome.notifications.create({
 - Commit frequently with descriptive messages
 - Always run linting and tests before pushing
 
+### Future Development
+- Follow the roadmap in [ROADMAP.md](./ROADMAP.md)
+- Refer to [FUTURE.md](./FUTURE.md) for feature ideas
+- Apply code optimizations from [OPTIMIZATION.md](./OPTIMIZATION.md)
+- Maintain test coverage for all new features
+
 ## Browser Compatibility
 - **Primary Target**: Chrome 88+ (Manifest V3 support)
 - **Testing**: Latest Chrome stable and beta versions
