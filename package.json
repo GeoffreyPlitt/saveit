@@ -7,9 +7,9 @@
     "test": "jest",
     "lint": "eslint .",
     "build": "echo 'No build step required'",
-    "docker:test": "docker-compose run --rm test",
-    "docker:lint": "docker-compose run --rm lint",
-    "docker:coverage": "docker-compose run --rm coverage"
+    "docker:test": "docker run --rm -v \"$(pwd):/app\" saveit-test npm test",
+    "docker:lint": "docker run --rm -v \"$(pwd):/app\" saveit-test npm run lint",
+    "docker:coverage": "docker run --rm -v \"$(pwd):/app\" saveit-test npm test -- --coverage"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.22.5",
@@ -21,7 +21,7 @@
   "jest": {
     "testEnvironment": "jsdom",
     "collectCoverage": true,
-    "coverageReporters": ["text", "lcov", "json-summary"],
+    "coverageReporters": ["text", "text-lcov", "lcov"],
     "coverageDirectory": "coverage",
     "moduleFileExtensions": ["js"],
     "testMatch": ["**/__tests__/**/*.js"],

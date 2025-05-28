@@ -86,7 +86,7 @@ async function fetchWithRetry(url, options, retries = 3, delay = 3000) {
 
 ### Docker Test Setup
 - `Dockerfile` defines the test environment
-- `docker-compose.yml` provides easy-to-use test commands
+- Docker commands are wrapped in npm scripts for convenience
 - Same Docker image used in both local development and CI
 
 ### Running Tests
@@ -172,25 +172,10 @@ chrome.notifications.create({
 
 ## Development Workflow
 
-### Phase Implementation
-1. **Phase 0**: Documentation and project setup ✅
-2. **Phase 1**: Manifest, basic structure, storage setup ✅
-3. **Phase 2**: Context menu, webhook POST logic, retry mechanism ✅
-4. **Phase 3**: Options page, popup, error details page ✅
-5. **Phase 4**: Testing setup, Jest tests, GitHub Actions ✅
-6. **Phase 5**: Optimization, Chrome Web Store preparation
-
 ### Git Workflow
-- Feature branches for each phase: `claude/phase-1`, `claude/phase-2`, etc.
+- Use feature branches for new functionality
 - Commit frequently with descriptive messages
-- Test functionality after each phase
 - Always run linting and tests before pushing
-
-### Before Completing Each Phase
-- [x] Test extension functionality manually in Chrome
-- [x] Run any available linting tools
-- [x] Verify all files are properly committed
-- [x] Update progress in GitHub issue comments
 
 ## Browser Compatibility
 - **Primary Target**: Chrome 88+ (Manifest V3 support)

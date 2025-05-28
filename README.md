@@ -78,6 +78,9 @@ We use Jest for unit testing with Docker to ensure consistent test environments 
 #### Running Tests with Docker (Recommended)
 
 ```bash
+# Build the Docker image
+docker build -t saveit-test .
+
 # Run tests in Docker
 npm run docker:test
 
