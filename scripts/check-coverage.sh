@@ -57,10 +57,26 @@ elif [ -f "coverage/lcov.info" ]; then
   BRANCHES_COVERED=$(grep "BRH:" coverage/lcov.info | awk '{sum+=$2} END {print sum}')
   BRANCHES_TOTAL=$(grep "BRF:" coverage/lcov.info | awk '{sum+=$2} END {print sum}')
 
-  # Calculate percentages without bc command (using awk)
-  LINES_PCT=$(awk "BEGIN { printf \"%.2f\", (100 * $LINES_COVERED / $LINES_TOTAL) }")
-  FUNCTIONS_PCT=$(awk "BEGIN { printf \"%.2f\", (100 * $FUNCTIONS_COVERED / $FUNCTIONS_TOTAL) }")
-  BRANCHES_PCT=$(awk "BEGIN { printf \"%.2f\", (100 * $BRANCHES_COVERED / $BRANCHES_TOTAL) }")
+  # Safety check to avoid division by zero
+  if [ -z "$LINES_TOTAL" ] || [ "$LINES_TOTAL" -eq 0 ]; then
+    LINES_TOTAL=1
+    echo "Warning: No line coverage data found, setting to 0%"
+  fi
+  
+  if [ -z "$FUNCTIONS_TOTAL" ] || [ "$FUNCTIONS_TOTAL" -eq 0 ]; then
+    FUNCTIONS_TOTAL=1
+    echo "Warning: No function coverage data found, setting to 0%"
+  fi
+  
+  if [ -z "$BRANCHES_TOTAL" ] || [ "$BRANCHES_TOTAL" -eq 0 ]; then
+    BRANCHES_TOTAL=1
+    echo "Warning: No branch coverage data found, setting to 0%"
+  fi
+
+  # Calculate percentages using awk (using conditional to avoid division by zero)
+  LINES_PCT=$(awk -v covered="$LINES_COVERED" -v total="$LINES_TOTAL" 'BEGIN { printf "%.2f", (100 * covered / total) }')
+  FUNCTIONS_PCT=$(awk -v covered="$FUNCTIONS_COVERED" -v total="$FUNCTIONS_TOTAL" 'BEGIN { printf "%.2f", (100 * covered / total) }')
+  BRANCHES_PCT=$(awk -v covered="$BRANCHES_COVERED" -v total="$BRANCHES_TOTAL" 'BEGIN { printf "%.2f", (100 * covered / total) }')
   
   # Print coverage report
   echo "Coverage Report:"
@@ -72,10 +88,10 @@ elif [ -f "coverage/lcov.info" ]; then
   # Based on codecov.yml range of 70...100
   MIN_THRESHOLD=70
   
-  # Check if any metrics are below threshold
-  if (( $(awk "BEGIN { print ($LINES_PCT < $MIN_THRESHOLD) }") )) || \
-     (( $(awk "BEGIN { print ($FUNCTIONS_PCT < $MIN_THRESHOLD) }") )) || \
-     (( $(awk "BEGIN { print ($BRANCHES_PCT < $MIN_THRESHOLD) }") )); then
+  # Check if any metrics are below threshold (using awk for float comparison)
+  if (( $(awk -v pct="$LINES_PCT" -v threshold="$MIN_THRESHOLD" 'BEGIN { print (pct < threshold) ? 1 : 0 }') )) || \
+     (( $(awk -v pct="$FUNCTIONS_PCT" -v threshold="$MIN_THRESHOLD" 'BEGIN { print (pct < threshold) ? 1 : 0 }') )) || \
+     (( $(awk -v pct="$BRANCHES_PCT" -v threshold="$MIN_THRESHOLD" 'BEGIN { print (pct < threshold) ? 1 : 0 }') )); then
     echo -e "\nWarning: Some metrics below threshold of ${MIN_THRESHOLD}%"
     echo "Continuing CI process to allow gradual improvement of coverage"
   else
