@@ -35,13 +35,13 @@ jobs:
 
     - name: Generate coverage report
       run: |
-        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage --coverageReporters=text-lcov > coverage.lcov
-        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage --coverageReporters=text > coverage.txt
+        mkdir -p coverage
+        docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage saveit-test npm test -- --coverage
+        touch coverage.txt
+        docker run --rm saveit-test npm test -- --coverage --coverageReporters=text > coverage.txt || true
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
-        path: |
-          coverage.txt
-          coverage/
+        path: coverage.txt
