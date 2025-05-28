@@ -4,50 +4,70 @@
  */
 
 // Import utilities
-importScripts('utils.js');
+// For ES modules in testing context
+import { fetchWithRetry, getWebhookConfig, logError } from './utils.js';
+
+// For traditional Chrome extension context (fallback)
+try {
+  if (typeof importScripts === 'function') {
+    importScripts('utils.js');
+  }
+} catch (e) {
+  console.error('Error importing utils.js', e);
+}
 
 // Register context menu on extension installation
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'saveit-send',
-    title: 'Send to Webhook',
-    contexts: ['link', 'page']
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onInstalled) {
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+      id: 'saveit-send',
+      title: 'Send to Webhook',
+      contexts: ['link', 'page']
+    });
   });
-});
+}
 
 // Handle toolbar icon clicks (chrome.action.onClicked)
-chrome.action.onClicked.addListener(async (tab) => {
-  await sendToWebhook(tab.url, tab.title);
-});
+if (typeof chrome !== 'undefined' && chrome.action && chrome.action.onClicked) {
+  chrome.action.onClicked.addListener(async (tab) => {
+    await sendToWebhook(tab.url, tab.title);
+  });
+}
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  const url = info.linkUrl || tab.url;
-  const title = tab.title;
-  await sendToWebhook(url, title);
-});
+if (typeof chrome !== 'undefined' && chrome.contextMenus && chrome.contextMenus.onClicked) {
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    const url = info.linkUrl || tab.url;
+    const title = tab.title;
+    await sendToWebhook(url, title);
+  });
+}
 
 // Handle messages from popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'sendToWebhook') {
-    sendToWebhook(request.url, request.title)
-      .then(() => sendResponse({ success: true }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    
-    // Return true to indicate async response
-    return true;
-  }
-});
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'sendToWebhook') {
+      sendToWebhook(request.url, request.title)
+        .then(() => sendResponse({ success: true }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      
+      // Return true to indicate async response
+      return true;
+    }
+  });
+}
 
 // Handle notification button clicks
-chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
-  if (notificationId.startsWith('saveit-error') && buttonIndex === 0) {
-    // Open error details page
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('error/error.html')
-    });
-  }
-});
+if (typeof chrome !== 'undefined' && chrome.notifications && chrome.notifications.onButtonClicked) {
+  chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+    if (notificationId.startsWith('saveit-error') && buttonIndex === 0) {
+      // Open error details page
+      chrome.tabs.create({
+        url: chrome.runtime.getURL('error/error.html')
+      });
+    }
+  });
+}
 
 /**
  * Send URL and title to configured webhook
@@ -118,12 +138,14 @@ async function sendToWebhook(url, title) {
  * @param {string} title - Page title
  */
 function showSuccessNotification(title) {
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon-16.png',
-    title: 'SaveIt: Sent!',
-    message: title
-  });
+  if (typeof chrome !== 'undefined' && chrome.notifications) {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon-16.png',
+      title: 'SaveIt: Sent!',
+      message: title
+    });
+  }
 }
 
 /**
@@ -132,13 +154,32 @@ function showSuccessNotification(title) {
  * @param {string} url - Failed URL
  */
 function showErrorNotification(error, url) {
-  const notificationId = `saveit-error-${Date.now()}`;
-  chrome.notifications.create(notificationId, {
-    type: 'basic',
-    iconUrl: 'icons/icon-16.png',
-    title: 'SaveIt: Failed',
-    message: `Failed to send: ${url}`,
-    buttons: [{ title: 'View Error' }]
-  });
+  if (typeof chrome !== 'undefined' && chrome.notifications) {
+    const notificationId = `saveit-error-${Date.now()}`;
+    chrome.notifications.create(notificationId, {
+      type: 'basic',
+      iconUrl: 'icons/icon-16.png',
+      title: 'SaveIt: Failed',
+      message: `Failed to send: ${url}`,
+      buttons: [{ title: 'View Error' }]
+    });
+  }
 }
 
+// Export functions for testing
+export {
+  sendToWebhook,
+  showSuccessNotification,
+  showErrorNotification
+};
+
+// Export functions to global scope for Chrome extension context
+if (typeof window !== 'undefined') {
+  window.sendToWebhook = sendToWebhook;
+  window.showSuccessNotification = showSuccessNotification;
+  window.showErrorNotification = showErrorNotification;
+} else if (typeof self !== 'undefined') {
+  self.sendToWebhook = sendToWebhook;
+  self.showSuccessNotification = showSuccessNotification;
+  self.showErrorNotification = showErrorNotification;
+}

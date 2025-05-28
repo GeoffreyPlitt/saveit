@@ -2,6 +2,138 @@
 
 This file contains development guidelines and tips for working on the SaveIt Chrome Extension project.
 
+## Testing Guidelines and Lessons Learned
+
+### ES Module Testing with Jest
+- Use `"type": "module"` in package.json to enable ES modules
+- Run Jest with `--experimental-vm-modules` flag: `node --experimental-vm-modules node_modules/jest/bin/jest.js`
+- Create a jest.config.js file to properly configure coverage collection:
+  ```javascript
+  export default {
+    testEnvironment: 'jsdom',
+    collectCoverage: true,
+    coverageReporters: ['text', 'text-lcov', 'lcov'],
+    coverageDirectory: 'coverage',
+    moduleFileExtensions: ['js'],
+    testMatch: ['**/__tests__/**/*.js'],
+    setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
+    testTimeout: 10000,
+    transform: {},
+    collectCoverageFrom: [
+      'utils.js',
+      'background.js',
+      'popup/popup.js',
+      'options/options.js'
+    ]
+  };
+  ```
+
+### Module Structure for Testing Chrome Extensions
+- Export functions for testing while maintaining global scope bindings:
+  ```javascript
+  // Export for testing
+  export { functionA, functionB };
+  
+  // Export to global scope for Chrome extension compatibility
+  if (typeof window !== 'undefined') {
+    window.functionA = functionA;
+    window.functionB = functionB;
+  } else if (typeof self !== 'undefined') {
+    self.functionA = functionA;
+    self.functionB = functionB;
+  }
+  ```
+- In service workers like background.js, add conditional imports:
+  ```javascript
+  // Import utilities for ES modules in testing context
+  import { utilFuncA, utilFuncB } from './utils.js';
+  
+  // For traditional Chrome extension context (fallback)
+  try {
+    if (typeof importScripts === 'function') {
+      importScripts('utils.js');
+    }
+  } catch (e) {
+    console.error('Error importing utils.js', e);
+  }
+  ```
+- Use conditional guards for Chrome API access:
+  ```javascript
+  if (typeof chrome !== 'undefined' && chrome.runtime) {
+    // Chrome API code here
+  }
+  ```
+
+### Jest Mocking Best Practices
+- Mock modules before importing the code that uses them:
+  ```javascript
+  // Create mock functions
+  const mockFetchWithRetry = jest.fn();
+  const mockGetWebhookConfig = jest.fn();
+  
+  // Mock the module
+  jest.mock('../utils.js', () => ({
+    __esModule: true,
+    fetchWithRetry: mockFetchWithRetry,
+    getWebhookConfig: mockGetWebhookConfig
+  }));
+  
+  // Now import the module that uses these dependencies
+  import { testedFunction } from '../module-to-test.js';
+  ```
+- Use `beforeEach` to reset mocks and set default implementations:
+  ```javascript
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchWithRetry.mockImplementation(() => Promise.resolve({}));
+  });
+  ```
+- Use jsdom environment for DOM testing:
+  ```javascript
+  /**
+   * @jest-environment jsdom
+   */
+  // Test code here
+  ```
+
+### Troubleshooting Common Issues
+- "Cannot assign to read only property" often means you're trying to spy on or mock an imported ES module property directly - use the module mocking approach instead
+- Use proper global mocks in setup.js and make them safe with conditional checks:
+  ```javascript
+  if (chrome.runtime.sendMessage && typeof chrome.runtime.sendMessage.mockImplementation === 'function') {
+    chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+      if (callback) callback({ success: true });
+      return true;
+    });
+  }
+  ```
+- For testing DOM interactions, set up a proper DOM environment with document elements before importing modules that interact with the DOM
+
+### Docker Testing Best Practices
+- Use Docker for consistent testing environments across different systems
+- NEVER run Docker-in-Docker (running Docker commands inside a Docker container) as it adds unnecessary complexity and can cause permission issues
+- When using Docker for testing:
+  ```bash
+  # Build a testing Docker image with all dependencies
+  docker build -t saveit-test -f Dockerfile.test .
+  
+  # Run tests directly in Docker
+  docker run --rm -v "$(pwd):/app" -w /app saveit-test npm test
+  
+  # Run tests with specific arguments
+  docker run --rm -v "$(pwd):/app" -w /app saveit-test npm test -- --testPathIgnorePatterns=background.test.js
+  ```
+- For the most reliable results, mount the source code directory as a volume rather than copying it into the container
+- Use the working directory flag `-w /app` to ensure commands run in the correct directory
+- Set up Docker to run with the same Node.js version as your development environment
+- Add useful testing commands to package.json, but run Docker directly rather than through npm scripts that call Docker:
+  ```json
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.js",
+    "test:coverage": "npm test -- --coverage"
+  }
+  ```
+
 ## Chrome Extension Development Best Practices
 
 ### Manifest V3 Requirements

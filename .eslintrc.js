@@ -10,7 +10,7 @@ module.exports = {
   extends: 'eslint:recommended',
   parserOptions: {
     ecmaVersion: 12,
-    sourceType: 'script'
+    sourceType: 'module' // Changed from 'script' to 'module'
   },
   rules: {
     // Strict rules as errors to enforce code quality
@@ -24,13 +24,7 @@ module.exports = {
     'no-console': ['error', { allow: ['error', 'warn'] }]
   },
   globals: {
-    // Add globals from utils.js that are used in other files
-    'fetchWithRetry': 'writable',
-    'getWebhookConfig': 'writable',
-    'saveWebhookConfig': 'writable',
-    'logError': 'writable',
-    'getLastError': 'writable',
-    'sendToWebhook': 'writable',
+    // Add globals that may not be detected by ESLint
     'importScripts': 'writable'
   }
 };
