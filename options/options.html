@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SaveIt Options</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header img {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #374151;
+    }
+    
+    input[type="url"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .primary {
+      background-color: #22c55e;
+      color: white;
+    }
+    
+    .primary:hover {
+      background-color: #16a34a;
+    }
+    
+    .secondary {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+    
+    .secondary:hover {
+      background-color: #e5e7eb;
+    }
+    
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .status.success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .status.error {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    
+    .help-text {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    
+    .input-validation {
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+    
+    .input-validation.show {
+      display: block;
+    }
+    
+    .input-validation.valid {
+      color: #166534;
+    }
+    
+    .input-validation.invalid {
+      color: #991b1b;
+    }
+    
+    input.valid {
+      border-color: #22c55e;
+    }
+    
+    input.invalid {
+      border-color: #ef4444;
+    }
+    
+    .feature-info {
+      background-color: #f0f9ff;
+      border: 1px solid #0ea5e9;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .feature-info h3 {
+      margin: 0 0 8px 0;
+      color: #0369a1;
+      font-size: 16px;
+    }
+    
+    .feature-info ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+    
+    .feature-info li {
+      margin-bottom: 4px;
+      color: #0369a1;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="../icons/icon-48.png" alt="SaveIt">
+    <h1>SaveIt Configuration</h1>
+    <p>Configure your webhook settings to start saving URLs</p>
+  </div>
+
+  <div class="feature-info">
+    <h3>How SaveIt Works</h3>
+    <ul>
+      <li><strong>Right-click</strong> on any link and select "Save It!"</li>
+      <li><strong>Click the extension icon</strong> to send the current page</li>
+      <li>URLs are sent with title and timestamp to your webhook</li>
+      <li>Success/error notifications with detailed error info</li>
+    </ul>
+  </div>
+
+  <form id="optionsForm">
+    <div class="form-group">
+      <label for="webhookUrl">Webhook URL</label>
+      <input 
+        type="url" 
+        id="webhookUrl" 
+        placeholder="https://your-webhook-endpoint.com/webhook" 
+        required
+      >
+      <div class="help-text">The endpoint where URLs will be sent via POST request</div>
+      <div id="webhookUrlValidation" class="input-validation"></div>
+    </div>
+
+    <div class="form-group">
+      <label for="apiKey">API Key (Optional)</label>
+      <input 
+        type="password" 
+        id="apiKey" 
+        placeholder="your-bearer-token-here"
+      >
+      <div class="help-text">Bearer token for webhook authentication (leave empty if not required)</div>
+      <div id="apiKeyValidation" class="input-validation"></div>
+    </div>
+
+    <div class="button-group">
+      <button type="submit" class="primary">Save Settings</button>
+      <button type="button" id="testButton" class="secondary">Test Webhook</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </form>
+
+  <script src="options.js"></script>
+</body>
+</html>
