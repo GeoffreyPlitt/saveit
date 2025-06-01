@@ -156,7 +156,7 @@
       border-left: 4px solid #ffc107;
       padding: 1rem;
       margin: 0 -1rem 1.5rem -1rem;
-      display: flex;
+      display: none; /* Hidden by default */
       align-items: flex-start;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
       position: sticky;
@@ -165,6 +165,10 @@
       font-weight: 500;
       font-size: 1.1rem;
       transition: transform 0.2s ease;
+    }
+    /* Special class to show the alert */
+    .config-alert.show {
+      display: flex;
     }
     .alert-icon {
       font-size: 1.5rem;
@@ -189,12 +193,12 @@
   </style>
 </head>
 <body>
-  <div id="config-alert" class="config-alert" style="display: none;">
+  <div id="config-alert" class="config-alert">
     <div class="alert-icon">⚠️</div>
     <div class="alert-content">
       <strong>Share Action Detected - Setup Required!</strong> You need to configure SaveIt before you can share content.
       <br>Please set up your webhook URL and bearer token below to enable sharing.
-      <button id="dismiss-alert" class="dismiss-button">Got it</button>
+      <button id="dismiss-alert" class="dismiss-button" onclick="this.parentNode.parentNode.style.display='none';">Got it</button>
     </div>
   </div>
 
@@ -535,7 +539,7 @@
       const alertElement = document.getElementById('config-alert');
       
       if (show) {
-        // Make sure it's visible and with correct display
+        // Use direct style manipulation to show the alert
         alertElement.style.display = 'flex';
         console.log("Alert element display set to:", alertElement.style.display);
         
@@ -548,11 +552,6 @@
         
         // Focus on the first field
         document.getElementById('webhook').focus();
-        
-        // Set up dismiss button handler
-        document.getElementById('dismiss-alert').addEventListener('click', function() {
-          alertElement.style.display = 'none';
-        });
       } else {
         alertElement.style.display = 'none';
       }
@@ -578,9 +577,25 @@
       return false;
     }
     
+    // Ensure dismiss button works
+    document.addEventListener('click', function(event) {
+      if (event.target && event.target.id === 'dismiss-alert') {
+        document.getElementById('config-alert').classList.remove('show');
+      }
+    });
+    
     // Load saved settings on page load
     window.addEventListener('DOMContentLoaded', () => {
       console.log("DOM loaded, checking parameters");
+      
+      // Make sure dismiss button works
+      const dismissButton = document.getElementById('dismiss-alert');
+      if (dismissButton) {
+        dismissButton.addEventListener('click', function() {
+          document.getElementById('config-alert').classList.remove('show');
+          console.log("Alert dismissed via button");
+        });
+      }
       
       // Check for test mode
       const testMode = checkTestParam();
@@ -663,10 +678,29 @@
   
   <!-- Test button (remove in production) -->
   <div style="margin-top: 2rem; text-align: center;">
-    <button onclick="window.location.href='./?from=share&needsConfig=true'" 
+    <button onclick="testMissingConfig()" 
             style="background-color: #4b5563; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
-      Simulate Share Without Config
+      Test: Show Missing Config Alert
     </button>
+    
+    <script>
+      // Direct testing function that immediately shows the alert
+      function testMissingConfig() {
+        // Show the alert directly using display style
+        const alertElement = document.getElementById('config-alert');
+        alertElement.style.display = 'flex';
+        console.log("Alert shown by test button");
+        
+        // Highlight form fields
+        document.getElementById('webhook').classList.add('highlight');
+        document.getElementById('token').classList.add('highlight');
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+        
+        return false;
+      }
+    </script>
   </div>
 </body>
 </html>
