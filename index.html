@@ -71,6 +71,28 @@
       border: 1px solid #d1d5db;
       border-radius: 4px;
       box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    }
+    input.highlight {
+      border-color: #ffc107;
+      box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+      }
+      70% {
+        box-shadow: 0 0 0 6px rgba(255, 193, 7, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+      }
     }
     small {
       display: block;
@@ -128,6 +150,24 @@
     .toast.visible {
       opacity: 1;
     }
+    .config-alert {
+      background-color: #fff3cd;
+      color: #856404;
+      border-left: 4px solid #ffc107;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 4px;
+      display: flex;
+      align-items: flex-start;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .alert-icon {
+      font-size: 1.5rem;
+      margin-right: 0.75rem;
+    }
+    .alert-content {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
@@ -136,6 +176,15 @@
       This application requires JavaScript to function. Please enable JavaScript in your browser settings.
     </div>
   </noscript>
+  
+  <div id="config-alert" class="config-alert" style="display: none;">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <strong>Configuration Required:</strong> You need to set up your webhook before sharing content.
+      <br>Please configure your webhook and bearer token below.
+    </div>
+  </div>
+  
   <div class="header">
     <img src="icons/icon-192.png" alt="SaveIt">
     <h1>SaveIt</h1>
@@ -452,14 +501,56 @@
       }
     });
     
+    // Check URL parameters
+    function getUrlParams() {
+      const params = {};
+      new URLSearchParams(window.location.search).forEach((value, key) => {
+        params[key] = value;
+      });
+      return params;
+    }
+    
+    // Show configuration alert if needed
+    function showConfigAlert(show) {
+      const alertElement = document.getElementById('config-alert');
+      alertElement.style.display = show ? 'flex' : 'none';
+      
+      if (show) {
+        // Scroll to top to ensure alert is visible
+        window.scrollTo(0, 0);
+        
+        // Highlight the form fields
+        document.getElementById('webhook').classList.add('highlight');
+        document.getElementById('token').classList.add('highlight');
+        
+        // Focus on the first field
+        document.getElementById('webhook').focus();
+      }
+    }
+    
     // Load saved settings on page load
     window.addEventListener('DOMContentLoaded', () => {
+      // Check if user arrived from a share action
+      const params = getUrlParams();
+      const fromShare = params.from === 'share';
+      const needsConfig = params.needsConfig === 'true';
+      
       loadSettings().then(settings => {
         if (settings.webhook && settings.token) {
           document.getElementById('status').textContent = 'Settings loaded. Ready to share!';
           document.getElementById('status').className = 'status success';
+          
+          // Even if settings exist, show a different message if they just tried to share
+          if (fromShare) {
+            showToast('Content received. Ready to share next time!', 'success');
+          }
         } else {
           document.getElementById('status').textContent = 'Please configure your webhook settings.';
+          
+          // Show alert if we need configuration and came from a share
+          if (fromShare && needsConfig) {
+            showConfigAlert(true);
+          }
         }
       });
     });

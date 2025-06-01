@@ -57,7 +57,13 @@ self.addEventListener('fetch', event => {
   
   // Handle share target
   if (url.pathname.endsWith('/share-target') && event.request.method === 'POST') {
-    event.respondWith(handleShare(event.request));
+    // Check if FormData is available and functioning correctly
+    if (typeof FormData !== 'undefined') {
+      event.respondWith(handleShare(event.request));
+    } else {
+      // Redirect with an error if FormData is not supported
+      event.respondWith(Response.redirect('./?error=formdata-not-supported', 303));
+    }
     return;
   }
   
@@ -270,6 +276,14 @@ async function handleShare(request) {
     await showToast('Error processing share', 'error');
   }
   
-  // Always redirect back to home page
-  return Response.redirect('./', 303);
+  // Add a query parameter to indicate the source was a share action
+  // and if configuration is needed
+  let redirectUrl = './';
+  if (!webhook || !token) {
+    redirectUrl += '?from=share&needsConfig=true';
+  } else {
+    redirectUrl += '?from=share';
+  }
+  
+  return Response.redirect(redirectUrl, 303);
 }
