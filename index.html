@@ -531,10 +531,14 @@
     
     // Show configuration alert if needed
     function showConfigAlert(show) {
+      console.log("showConfigAlert called with:", show);
       const alertElement = document.getElementById('config-alert');
-      alertElement.style.display = show ? 'flex' : 'none';
       
       if (show) {
+        // Make sure it's visible and with correct display
+        alertElement.style.display = 'flex';
+        console.log("Alert element display set to:", alertElement.style.display);
+        
         // Scroll to top to ensure alert is visible
         window.scrollTo(0, 0);
         
@@ -549,28 +553,49 @@
         document.getElementById('dismiss-alert').addEventListener('click', function() {
           alertElement.style.display = 'none';
         });
+      } else {
+        alertElement.style.display = 'none';
       }
     }
     
-    // Add a subtle animation to the alert
-    function pulseAlert() {
-      const alertElement = document.getElementById('config-alert');
-      if (alertElement.style.display === 'flex') {
-        alertElement.style.transform = 'scale(1.02)';
-        setTimeout(() => {
-          alertElement.style.transform = 'scale(1)';
-        }, 200);
+    // For testing without Android - append #test-share-target to URL to simulate
+    function checkTestParam() {
+      if (window.location.hash === '#test-share-target') {
+        console.log("Test share target detected");
+        // Simulate a share action without configuration
+        history.replaceState(null, null, '?from=share&needsConfig=true');
+        return true;
       }
+      return false;
     }
     
     // Load saved settings on page load
     window.addEventListener('DOMContentLoaded', () => {
-      // Check if user arrived from a share action
+      console.log("DOM loaded, checking parameters");
+      
+      // Check for test mode
+      const testMode = checkTestParam();
+      
+      // Get URL parameters
       const params = getUrlParams();
+      console.log("URL parameters:", params);
+      
       const fromShare = params.from === 'share';
       const needsConfig = params.needsConfig === 'true';
       
+      console.log("From share:", fromShare);
+      console.log("Needs config:", needsConfig);
+      
+      // Always show the alert during testing or when parameters match
+      if (testMode || (fromShare && needsConfig)) {
+        console.log("Should show alert - calling showConfigAlert(true)");
+        // Don't wait for loadSettings to complete
+        showConfigAlert(true);
+      }
+      
       loadSettings().then(settings => {
+        console.log("Settings loaded:", settings);
+        
         if (settings.webhook && settings.token) {
           document.getElementById('status').textContent = 'Settings loaded. Ready to share!';
           document.getElementById('status').className = 'status success';
@@ -582,13 +607,10 @@
         } else {
           document.getElementById('status').textContent = 'Please configure your webhook settings.';
           
-          // Show alert if we need configuration and came from a share
+          // Double check alert is showing if from share and needs config
           if (fromShare && needsConfig) {
+            console.log("Double checking alert is visible");
             showConfigAlert(true);
-            
-            // Add a subtle animation to draw attention
-            setTimeout(pulseAlert, 500);
-            setTimeout(pulseAlert, 3000);
           }
         }
       });
@@ -600,6 +622,39 @@
         showToast(event.data.message, event.data.toastType || 'success');
       }
     });
+    
+    // Add a test function that can be called from console
+    window.testShareTarget = function() {
+      // Clear any existing settings temporarily
+      localStorage.clear();
+      indexedDB.deleteDatabase('saveit-db');
+      
+      // Redirect to simulate share target redirect
+      window.location.href = './?from=share&needsConfig=true';
+    };
+    
+    // Check if we should display the alert right away (this runs after all page elements are loaded)
+    window.addEventListener('load', function() {
+      // Force check one more time - this should ensure the alert is visible
+      const params = getUrlParams();
+      if (params.from === 'share' && params.needsConfig === 'true') {
+        console.log('Page fully loaded - showing alert');
+        // Wait a bit to ensure everything is rendered
+        setTimeout(() => {
+          const alertElement = document.getElementById('config-alert');
+          alertElement.style.display = 'flex';
+          console.log('Alert display set to:', alertElement.style.display);
+          
+          // Scroll to the top to make sure it's visible
+          window.scrollTo(0, 0);
+        }, 100);
+      }
+    });
   </script>
+  
+  <!-- Quick test link (remove in production) -->
+  <div style="margin-top: 2rem; text-align: center; opacity: 0.7;">
+    <a href="#test-share-target" style="color: #666; font-size: 0.8rem;">Test Share Target</a>
+  </div>
 </body>
 </html>

@@ -280,10 +280,14 @@ async function handleShare(request) {
   // and if configuration is needed
   let redirectUrl = './';
   if (!webhook || !token) {
-    redirectUrl += '?from=share&needsConfig=true';
+    console.log('Redirecting with needsConfig=true');
+    // Make sure these parameters are very explicitly set
+    redirectUrl = './?from=share&needsConfig=true';
   } else {
-    redirectUrl += '?from=share';
+    redirectUrl = './?from=share';
   }
   
+  // Log the redirect URL for debugging
+  console.log('Redirecting to:', redirectUrl);
   return Response.redirect(redirectUrl, 303);
 }
