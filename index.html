@@ -562,8 +562,17 @@
     function checkTestParam() {
       if (window.location.hash === '#test-share-target') {
         console.log("Test share target detected");
+        // Clear existing settings to simulate no configuration
+        localStorage.clear();
+        try {
+          indexedDB.deleteDatabase('saveit-db');
+        } catch(e) {
+          console.error("Error clearing IndexedDB:", e);
+        }
+        
         // Simulate a share action without configuration
-        history.replaceState(null, null, '?from=share&needsConfig=true');
+        // Using full reload to ensure proper state
+        window.location.href = './?from=share&needsConfig=true';
         return true;
       }
       return false;
@@ -652,9 +661,12 @@
     });
   </script>
   
-  <!-- Quick test link (remove in production) -->
-  <div style="margin-top: 2rem; text-align: center; opacity: 0.7;">
-    <a href="#test-share-target" style="color: #666; font-size: 0.8rem;">Test Share Target</a>
+  <!-- Test button (remove in production) -->
+  <div style="margin-top: 2rem; text-align: center;">
+    <button onclick="window.location.href='./?from=share&needsConfig=true'" 
+            style="background-color: #4b5563; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+      Simulate Share Without Config
+    </button>
   </div>
 </body>
 </html>
