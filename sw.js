@@ -170,7 +170,7 @@ async function showToast(message, toastType = 'success') {
 /**
  * Handle share target request
  * @param {Request} request - The share target request
- * @returns {Promise<Response>} - Returns a response without redirecting for unconfigured webhook
+ * @returns {Promise<Response>} - Returns a response that completes the share action
  */
 async function handleShare(request) {
   try {
@@ -179,17 +179,18 @@ async function handleShare(request) {
     const token = await readFromStorage('token');
     
     if (!webhook || !token) {
-      // Instead of redirecting, show a system toast and stay in the current app
-      // This uses Android's notification system rather than our own UI
-      await showToast('Error: No webhook configured. Please open SaveIt app and configure one.', 'error');
+      console.log('No webhook configured, showing error notification');
       
-      // Return a simple response indicating configuration is needed, but don't redirect
-      return new Response('Configuration required', {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/plain'
-        }
+      // Show a persistent error notification that requires user dismissal
+      await self.registration.showNotification('SaveIt Configuration Required', {
+        body: 'No webhook configured. Please open SaveIt app and configure one.',
+        icon: './icons/icon-192.png',
+        requireInteraction: true, // This makes the notification persistent until user dismisses it
+        tag: 'saveit-config-error'
       });
+      
+      // Return a 204 to silently complete the share action without opening the app
+      return new Response(null, { status: 204 });
     }
     
     // Clone the request to extract form data
@@ -213,9 +214,18 @@ async function handleShare(request) {
     
     // Check for network connectivity
     if (!navigator.onLine) {
-      await showToast('You are offline. Cannot send to webhook.', 'error');
-      // TODO: Could implement a background sync queue here in a future version
-      return Response.redirect('./', 303);
+      console.log('Device is offline, showing error notification');
+      
+      // Show a persistent offline error notification
+      await self.registration.showNotification('SaveIt Error', {
+        body: 'You are offline. Cannot send to webhook.',
+        icon: './icons/icon-192.png',
+        requireInteraction: true, // Make it persistent
+        tag: 'saveit-offline-error'
+      });
+      
+      // Return a 204 to silently complete the share action
+      return new Response(null, { status: 204 });
     }
     
     // Send to webhook
@@ -236,7 +246,25 @@ async function handleShare(request) {
       if (response.ok) {
         // Log success details
         console.log(`Webhook response: ${response.status}`);
-        await showToast('Content successfully sent to webhook', 'success');
+        
+        // Show a temporary success notification (will disappear after 5 seconds)
+        const notificationTag = 'saveit-success-' + Date.now();
+        await self.registration.showNotification('SaveIt', {
+          body: 'Content successfully sent to webhook',
+          icon: './icons/icon-192.png',
+          tag: notificationTag
+        });
+        
+        // Set a timeout to close the notification after 5 seconds
+        setTimeout(async () => {
+          const notifications = await self.registration.getNotifications({
+            tag: notificationTag
+          });
+          notifications.forEach(notification => notification.close());
+        }, 5000);
+        
+        // Return a 204 to silently complete the share action
+        return new Response(null, { status: 204 });
       } else {
         const errorText = await response.text().catch(e => 'Could not read error details');
         console.error('Webhook error:', response.status, errorText);
@@ -263,7 +291,16 @@ async function handleShare(request) {
             errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
         
-        await showToast(errorMessage, 'error');
+        // Show a persistent error notification
+        await self.registration.showNotification('SaveIt Error', {
+          body: errorMessage,
+          icon: './icons/icon-192.png',
+          requireInteraction: true, // Make it persistent
+          tag: 'saveit-webhook-error'
+        });
+        
+        // Return a 204 to silently complete the share action
+        return new Response(null, { status: 204 });
       }
     } catch (fetchError) {
       console.error('Fetch error:', fetchError);
@@ -278,21 +315,29 @@ async function handleShare(request) {
         errorMessage = 'You are offline. Cannot send to webhook.';
       }
       
-      await showToast(errorMessage, 'error');
+      // Show a persistent error notification
+      await self.registration.showNotification('SaveIt Error', {
+        body: errorMessage,
+        icon: './icons/icon-192.png',
+        requireInteraction: true, // Make it persistent
+        tag: 'saveit-fetch-error'
+      });
+      
+      // Return a 204 to silently complete the share action
+      return new Response(null, { status: 204 });
     }
-    
-    // Only redirect on success - keeps user in their current app otherwise
-    return Response.redirect('./', 303);
   } catch (error) {
     console.error('Error in share handler:', error);
-    await showToast('Error processing share', 'error');
     
-    // Return an error response, but don't redirect
-    return new Response('Error processing share', {
-      status: 500,
-      headers: {
-        'Content-Type': 'text/plain'
-      }
+    // Show a persistent generic error notification
+    await self.registration.showNotification('SaveIt Error', {
+      body: 'Error processing share. Please try again.',
+      icon: './icons/icon-192.png',
+      requireInteraction: true, // Make it persistent
+      tag: 'saveit-general-error'
     });
+    
+    // Return a 204 to silently complete the share action
+    return new Response(null, { status: 204 });
   }
 }
