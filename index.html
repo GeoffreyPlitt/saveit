@@ -78,22 +78,6 @@
       border-color: #22c55e;
       box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
     }
-    input.highlight {
-      border-color: #ffc107;
-      box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
-      }
-      70% {
-        box-shadow: 0 0 0 6px rgba(255, 193, 7, 0);
-      }
-      100% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
-      }
-    }
     small {
       display: block;
       margin-top: 0.25rem;
@@ -150,58 +134,9 @@
     .toast.visible {
       opacity: 1;
     }
-    .config-alert {
-      background-color: #fff3cd;
-      color: #856404;
-      border-left: 4px solid #ffc107;
-      padding: 1rem;
-      margin: 0 -1rem 1.5rem -1rem;
-      display: none; /* Hidden by default */
-      align-items: flex-start;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      font-weight: 500;
-      font-size: 1.1rem;
-      transition: transform 0.2s ease;
-    }
-    /* Special class to show the alert */
-    .config-alert.show {
-      display: flex;
-    }
-    .alert-icon {
-      font-size: 1.5rem;
-      margin-right: 0.75rem;
-    }
-    .alert-content {
-      flex: 1;
-    }
-    .dismiss-button {
-      background-color: #856404;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 0.25rem 0.75rem;
-      margin-top: 0.5rem;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    .dismiss-button:hover {
-      background-color: #725403;
-    }
   </style>
 </head>
 <body>
-  <div id="config-alert" class="config-alert">
-    <div class="alert-icon">⚠️</div>
-    <div class="alert-content">
-      <strong>Share Action Detected - Setup Required!</strong> You need to configure SaveIt before you can share content.
-      <br>Please set up your webhook URL and bearer token below to enable sharing.
-      <button id="dismiss-alert" class="dismiss-button" onclick="this.parentNode.parentNode.style.display='none';">Got it</button>
-    </div>
-  </div>
-
   <noscript>
     <div class="noscript-warning">
       This application requires JavaScript to function. Please enable JavaScript in your browser settings.
@@ -524,118 +459,14 @@
       }
     });
     
-    // Check URL parameters
-    function getUrlParams() {
-      const params = {};
-      new URLSearchParams(window.location.search).forEach((value, key) => {
-        params[key] = value;
-      });
-      return params;
-    }
-    
-    // Show configuration alert if needed
-    function showConfigAlert(show) {
-      console.log("showConfigAlert called with:", show);
-      const alertElement = document.getElementById('config-alert');
-      
-      if (show) {
-        // Use direct style manipulation to show the alert
-        alertElement.style.display = 'flex';
-        console.log("Alert element display set to:", alertElement.style.display);
-        
-        // Scroll to top to ensure alert is visible
-        window.scrollTo(0, 0);
-        
-        // Highlight the form fields
-        document.getElementById('webhook').classList.add('highlight');
-        document.getElementById('token').classList.add('highlight');
-        
-        // Focus on the first field
-        document.getElementById('webhook').focus();
-      } else {
-        alertElement.style.display = 'none';
-      }
-    }
-    
-    // For testing without Android - append #test-share-target to URL to simulate
-    function checkTestParam() {
-      if (window.location.hash === '#test-share-target') {
-        console.log("Test share target detected");
-        // Clear existing settings to simulate no configuration
-        localStorage.clear();
-        try {
-          indexedDB.deleteDatabase('saveit-db');
-        } catch(e) {
-          console.error("Error clearing IndexedDB:", e);
-        }
-        
-        // Simulate a share action without configuration
-        // Using full reload to ensure proper state
-        window.location.href = './?from=share&needsConfig=true';
-        return true;
-      }
-      return false;
-    }
-    
-    // Ensure dismiss button works
-    document.addEventListener('click', function(event) {
-      if (event.target && event.target.id === 'dismiss-alert') {
-        document.getElementById('config-alert').classList.remove('show');
-      }
-    });
-    
     // Load saved settings on page load
     window.addEventListener('DOMContentLoaded', () => {
-      console.log("DOM loaded, checking parameters");
-      
-      // Make sure dismiss button works
-      const dismissButton = document.getElementById('dismiss-alert');
-      if (dismissButton) {
-        dismissButton.addEventListener('click', function() {
-          document.getElementById('config-alert').classList.remove('show');
-          console.log("Alert dismissed via button");
-        });
-      }
-      
-      // Check for test mode
-      const testMode = checkTestParam();
-      
-      // Get URL parameters
-      const params = getUrlParams();
-      console.log("URL parameters:", params);
-      
-      const fromShare = params.from === 'share';
-      const needsConfig = params.needsConfig === 'true';
-      
-      console.log("From share:", fromShare);
-      console.log("Needs config:", needsConfig);
-      
-      // Always show the alert during testing or when parameters match
-      if (testMode || (fromShare && needsConfig)) {
-        console.log("Should show alert - calling showConfigAlert(true)");
-        // Don't wait for loadSettings to complete
-        showConfigAlert(true);
-      }
-      
       loadSettings().then(settings => {
-        console.log("Settings loaded:", settings);
-        
         if (settings.webhook && settings.token) {
           document.getElementById('status').textContent = 'Settings loaded. Ready to share!';
           document.getElementById('status').className = 'status success';
-          
-          // Even if settings exist, show a different message if they just tried to share
-          if (fromShare) {
-            showToast('Content received. Ready to share next time!', 'success');
-          }
         } else {
           document.getElementById('status').textContent = 'Please configure your webhook settings.';
-          
-          // Double check alert is showing if from share and needs config
-          if (fromShare && needsConfig) {
-            console.log("Double checking alert is visible");
-            showConfigAlert(true);
-          }
         }
       });
     });
@@ -647,60 +478,6 @@
       }
     });
     
-    // Add a test function that can be called from console
-    window.testShareTarget = function() {
-      // Clear any existing settings temporarily
-      localStorage.clear();
-      indexedDB.deleteDatabase('saveit-db');
-      
-      // Redirect to simulate share target redirect
-      window.location.href = './?from=share&needsConfig=true';
-    };
-    
-    // Check if we should display the alert right away (this runs after all page elements are loaded)
-    window.addEventListener('load', function() {
-      // Force check one more time - this should ensure the alert is visible
-      const params = getUrlParams();
-      if (params.from === 'share' && params.needsConfig === 'true') {
-        console.log('Page fully loaded - showing alert');
-        // Wait a bit to ensure everything is rendered
-        setTimeout(() => {
-          const alertElement = document.getElementById('config-alert');
-          alertElement.style.display = 'flex';
-          console.log('Alert display set to:', alertElement.style.display);
-          
-          // Scroll to the top to make sure it's visible
-          window.scrollTo(0, 0);
-        }, 100);
-      }
-    });
   </script>
-  
-  <!-- Test button (remove in production) -->
-  <div style="margin-top: 2rem; text-align: center;">
-    <button onclick="testMissingConfig()" 
-            style="background-color: #4b5563; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
-      Test: Show Missing Config Alert
-    </button>
-    
-    <script>
-      // Direct testing function that immediately shows the alert
-      function testMissingConfig() {
-        // Show the alert directly using display style
-        const alertElement = document.getElementById('config-alert');
-        alertElement.style.display = 'flex';
-        console.log("Alert shown by test button");
-        
-        // Highlight form fields
-        document.getElementById('webhook').classList.add('highlight');
-        document.getElementById('token').classList.add('highlight');
-        
-        // Scroll to top
-        window.scrollTo(0, 0);
-        
-        return false;
-      }
-    </script>
-  </div>
 </body>
 </html>

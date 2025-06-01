@@ -170,7 +170,7 @@ async function showToast(message, toastType = 'success') {
 /**
  * Handle share target request
  * @param {Request} request - The share target request
- * @returns {Promise<Response>} - Redirects back to home page
+ * @returns {Promise<Response>} - Returns a response without redirecting for unconfigured webhook
  */
 async function handleShare(request) {
   try {
@@ -179,8 +179,17 @@ async function handleShare(request) {
     const token = await readFromStorage('token');
     
     if (!webhook || !token) {
-      await showToast('Please configure your webhook settings first', 'error');
-      return Response.redirect('./', 303);
+      // Instead of redirecting, show a system toast and stay in the current app
+      // This uses Android's notification system rather than our own UI
+      await showToast('Error: No webhook configured. Please open SaveIt app and configure one.', 'error');
+      
+      // Return a simple response indicating configuration is needed, but don't redirect
+      return new Response('Configuration required', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain'
+        }
+      });
     }
     
     // Clone the request to extract form data
@@ -271,23 +280,19 @@ async function handleShare(request) {
       
       await showToast(errorMessage, 'error');
     }
+    
+    // Only redirect on success - keeps user in their current app otherwise
+    return Response.redirect('./', 303);
   } catch (error) {
     console.error('Error in share handler:', error);
     await showToast('Error processing share', 'error');
+    
+    // Return an error response, but don't redirect
+    return new Response('Error processing share', {
+      status: 500,
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
   }
-  
-  // Add a query parameter to indicate the source was a share action
-  // and if configuration is needed
-  let redirectUrl = './';
-  if (!webhook || !token) {
-    console.log('Redirecting with needsConfig=true');
-    // Make sure these parameters are very explicitly set
-    redirectUrl = './?from=share&needsConfig=true';
-  } else {
-    redirectUrl = './?from=share';
-  }
-  
-  // Log the redirect URL for debugging
-  console.log('Redirecting to:', redirectUrl);
-  return Response.redirect(redirectUrl, 303);
 }
