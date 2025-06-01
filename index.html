@@ -155,11 +155,16 @@
       color: #856404;
       border-left: 4px solid #ffc107;
       padding: 1rem;
-      margin-bottom: 1.5rem;
-      border-radius: 4px;
+      margin: 0 -1rem 1.5rem -1rem;
       display: flex;
       align-items: flex-start;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      font-weight: 500;
+      font-size: 1.1rem;
+      transition: transform 0.2s ease;
     }
     .alert-icon {
       font-size: 1.5rem;
@@ -168,22 +173,36 @@
     .alert-content {
       flex: 1;
     }
+    .dismiss-button {
+      background-color: #856404;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.25rem 0.75rem;
+      margin-top: 0.5rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .dismiss-button:hover {
+      background-color: #725403;
+    }
   </style>
 </head>
 <body>
+  <div id="config-alert" class="config-alert" style="display: none;">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <strong>Share Action Detected - Setup Required!</strong> You need to configure SaveIt before you can share content.
+      <br>Please set up your webhook URL and bearer token below to enable sharing.
+      <button id="dismiss-alert" class="dismiss-button">Got it</button>
+    </div>
+  </div>
+
   <noscript>
     <div class="noscript-warning">
       This application requires JavaScript to function. Please enable JavaScript in your browser settings.
     </div>
   </noscript>
-  
-  <div id="config-alert" class="config-alert" style="display: none;">
-    <div class="alert-icon">⚠️</div>
-    <div class="alert-content">
-      <strong>Configuration Required:</strong> You need to set up your webhook before sharing content.
-      <br>Please configure your webhook and bearer token below.
-    </div>
-  </div>
   
   <div class="header">
     <img src="icons/icon-192.png" alt="SaveIt">
@@ -525,6 +544,22 @@
         
         // Focus on the first field
         document.getElementById('webhook').focus();
+        
+        // Set up dismiss button handler
+        document.getElementById('dismiss-alert').addEventListener('click', function() {
+          alertElement.style.display = 'none';
+        });
+      }
+    }
+    
+    // Add a subtle animation to the alert
+    function pulseAlert() {
+      const alertElement = document.getElementById('config-alert');
+      if (alertElement.style.display === 'flex') {
+        alertElement.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          alertElement.style.transform = 'scale(1)';
+        }, 200);
       }
     }
     
@@ -550,6 +585,10 @@
           // Show alert if we need configuration and came from a share
           if (fromShare && needsConfig) {
             showConfigAlert(true);
+            
+            // Add a subtle animation to draw attention
+            setTimeout(pulseAlert, 500);
+            setTimeout(pulseAlert, 3000);
           }
         }
       });
