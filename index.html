@@ -7,6 +7,18 @@
   <meta name="theme-color" content="#22c55e">
   <link rel="manifest" href="manifest.json">
   <title>SaveIt</title>
+  <noscript>
+    <style>
+      .noscript-warning {
+        background-color: #fee2e2;
+        color: #7f1d1d;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+        border-left: 4px solid #dc2626;
+      }
+    </style>
+  </noscript>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -119,6 +131,11 @@
   </style>
 </head>
 <body>
+  <noscript>
+    <div class="noscript-warning">
+      This application requires JavaScript to function. Please enable JavaScript in your browser settings.
+    </div>
+  </noscript>
   <div class="header">
     <img src="icons/icon-192.png" alt="SaveIt">
     <h1>SaveIt</h1>
@@ -197,13 +214,36 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // Register Service Worker
+    // Register Service Worker with better error handling
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker registered'))
-          .catch(err => console.error('SW registration failed:', err));
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('sw.js');
+          console.log('Service Worker registered with scope:', registration.scope);
+          
+          // Check for updates to the Service Worker
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New service worker is installed but waiting to activate
+                console.log('New service worker available');
+                showToast('New version available. Reload to update.', 'success');
+              }
+            });
+          });
+        } catch (error) {
+          console.error('Service Worker registration failed:', error);
+          // Don't show error to user unless they're trying to share
+          if (window.location.search.includes('share=failed')) {
+            showToast('Service Worker failed to register. Share functionality may not work.', 'error');
+          }
+        }
       });
+    } else {
+      console.warn('Service Workers not supported');
+      // Don't show this on page load to avoid confusion
+      // showToast('Service Workers not supported in this browser. App functionality will be limited.', 'error');
     }
 
     // IndexedDB configuration
