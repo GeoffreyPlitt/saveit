@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#22c55e">
+  <title>SaveIt</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+      color: #374151;
+      background-color: #f0f9ff;
+    }
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .header img {
+      width: 72px;
+      height: 72px;
+    }
+    h1 {
+      color: #22c55e;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .feature-info {
+      background-color: white;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    form {
+      background-color: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .button-group {
+      margin-top: 1.5rem;
+    }
+    button.primary {
+      background-color: #22c55e;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button.primary:hover {
+      background-color: #16a34a;
+    }
+    .status {
+      margin-top: 1rem;
+      padding: 0.5rem;
+    }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .toast.success {
+      background-color: #dcfce7;
+      color: #14532d;
+      border-left: 4px solid #22c55e;
+    }
+    .toast.error {
+      background-color: #fee2e2;
+      color: #7f1d1d;
+      border-left: 4px solid #dc2626;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="icons/icon-192.png" alt="SaveIt">
+    <h1>SaveIt</h1>
+    <p>Configure your webhook settings to start saving URLs from Android</p>
+  </div>
+
+  <div class="feature-info">
+    <h3>How SaveIt Works</h3>
+    <ul>
+      <li>Install this PWA on your Android device</li>
+      <li>Share content from any app to SaveIt</li>
+      <li>SaveIt sends the content to your webhook</li>
+      <li>Configure your webhook URL and Bearer token below</li>
+    </ul>
+  </div>
+
+  <form id="settings-form">
+    <div class="form-group">
+      <label for="webhook">Webhook URL</label>
+      <input 
+        type="url" 
+        id="webhook" 
+        placeholder="https://your-webhook-endpoint.com/webhook" 
+        required
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="token">Bearer Token</label>
+      <input 
+        type="text" 
+        id="token" 
+        placeholder="your-bearer-token-here"
+        required
+      >
+    </div>
+
+    <div class="button-group">
+      <button type="submit" class="primary">Save Settings</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </form>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registered'))
+          .catch(err => console.error('SW registration failed:', err));
+      });
+    }
+
+    // Basic event listeners setup (we'll implement functionality in Milestone 2)
+    document.getElementById('settings-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Will implement in next milestone
+      showToast('Settings will be saved in Milestone 2', 'success');
+    });
+
+    // Simple toast notification
+    function showToast(message, type = 'success', duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} visible`;
+      
+      setTimeout(() => {
+        toast.className = 'toast';
+      }, duration);
+    }
+  </script>
+</body>
+</html>
