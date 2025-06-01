@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
+  <meta name="description" content="Send web pages and links to your configured webhook">
   <meta name="theme-color" content="#22c55e">
+  <link rel="manifest" href="manifest.json">
   <title>SaveIt</title>
   <style>
     body {
@@ -58,6 +59,12 @@
       border: 1px solid #d1d5db;
       border-radius: 4px;
       box-sizing: border-box;
+    }
+    small {
+      display: block;
+      margin-top: 0.25rem;
+      color: #6b7280;
+      font-size: 0.875rem;
     }
     .button-group {
       margin-top: 1.5rem;
@@ -129,13 +136,32 @@
   </div>
   
   <div class="feature-info">
-    <h3>Installation Guide</h3>
+    <h3>Installation Guide (Android Only)</h3>
+    <p><strong>Note:</strong> This app only works as a share target on Android devices.</p>
     <ol>
       <li>Open this page in Chrome on your Android device</li>
       <li>Tap the menu (three dots) in the upper right</li>
       <li>Select "Install app" or "Add to Home Screen"</li>
-      <li>After installation, SaveIt will appear in your share menu</li>
+      <li>After installation, SaveIt will appear in your Android share menu</li>
     </ol>
+  </div>
+  
+  <div class="feature-info">
+    <h3>Webhook Setup</h3>
+    <p>Your webhook endpoint must:</p>
+    <ul>
+      <li>Accept POST requests with JSON data</li>
+      <li>Allow CORS requests from <code>https://geoffreyplitt.github.io</code></li>
+      <li>Accept Bearer token authentication</li>
+      <li>Process the following payload format:</li>
+    </ul>
+    <pre style="background-color: #f1f5f9; padding: 0.75rem; border-radius: 4px; overflow-x: auto;">
+{
+  "title": "Page Title",
+  "text": "Selected Text",
+  "url": "https://example.com/page",
+  "timestamp": "2025-05-31T10:15:30.123Z"
+}</pre>
   </div>
 
   <form id="settings-form">
@@ -152,11 +178,13 @@
     <div class="form-group">
       <label for="token">Bearer Token</label>
       <input 
-        type="text" 
+        type="password" 
         id="token" 
         placeholder="your-bearer-token-here"
+        autocomplete="off"
         required
       >
+      <small>This token will be stored locally on your device only</small>
     </div>
 
     <div class="button-group">
@@ -182,26 +210,56 @@
     const DB_NAME = 'saveit-db';
     const DB_VERSION = 1;
     const SETTINGS_STORE = 'settings';
+    
+    // Feature detection and fallback
+    const storageAvailable = {
+      indexedDB: () => {
+        try {
+          return 'indexedDB' in window && window.indexedDB !== null;
+        } catch (e) {
+          return false;
+        }
+      },
+      localStorage: () => {
+        try {
+          return 'localStorage' in window && window.localStorage !== null;
+        } catch (e) {
+          return false;
+        }
+      }
+    };
 
     // Open IndexedDB connection
     function openDb() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        
-        request.onerror = event => {
-          reject('IndexedDB error: ' + event.target.error);
-        };
-        
-        request.onsuccess = event => {
-          resolve(event.target.result);
-        };
-        
-        request.onupgradeneeded = event => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
-            db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
-          }
-        };
+        // Handle Safari private browsing mode which throws error for IndexedDB
+        try {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          
+          request.onerror = event => {
+            console.error('IndexedDB error:', event.target.error);
+            reject('IndexedDB error: ' + event.target.error);
+          };
+          
+          request.onsuccess = event => {
+            resolve(event.target.result);
+          };
+          
+          request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+              db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
+            }
+          };
+          
+          request.onblocked = event => {
+            console.warn('IndexedDB blocked. Please close other tabs with this site open');
+            reject('Database blocked');
+          };
+        } catch (err) {
+          console.error('IndexedDB not available:', err);
+          reject('IndexedDB not available - you may be in private browsing mode');
+        }
       });
     }
 
@@ -234,27 +292,68 @@
       });
     }
 
+    // LocalStorage fallback functions
+    function saveToLocalStorage(key, value) {
+      try {
+        localStorage.setItem(`saveit_${key}`, value);
+        return true;
+      } catch (error) {
+        console.error('LocalStorage error:', error);
+        return false;
+      }
+    }
+    
+    function getFromLocalStorage(key) {
+      try {
+        return localStorage.getItem(`saveit_${key}`);
+      } catch (error) {
+        console.error('LocalStorage error:', error);
+        return null;
+      }
+    }
+    
     // Save all settings at once
     async function saveSettings(webhook, token) {
       try {
-        await Promise.all([
-          saveSetting('webhook', webhook),
-          saveSetting('token', token)
-        ]);
-        return true;
+        // Try IndexedDB first
+        if (storageAvailable.indexedDB()) {
+          await Promise.all([
+            saveSetting('webhook', webhook),
+            saveSetting('token', token)
+          ]);
+          return true;
+        } 
+        // Fall back to localStorage
+        else if (storageAvailable.localStorage()) {
+          return saveToLocalStorage('webhook', webhook) && 
+                 saveToLocalStorage('token', token);
+        } else {
+          throw new Error('No storage mechanism available');
+        }
       } catch (error) {
         console.error('Error saving settings:', error);
         return false;
       }
     }
 
-    // Load settings from IndexedDB
+    // Load settings from storage
     async function loadSettings() {
       try {
-        const [webhook, token] = await Promise.all([
-          getSetting('webhook'),
-          getSetting('token')
-        ]);
+        let webhook = null;
+        let token = null;
+        
+        // Try IndexedDB first
+        if (storageAvailable.indexedDB()) {
+          [webhook, token] = await Promise.all([
+            getSetting('webhook'),
+            getSetting('token')
+          ]);
+        } 
+        // Fall back to localStorage
+        else if (storageAvailable.localStorage()) {
+          webhook = getFromLocalStorage('webhook');
+          token = getFromLocalStorage('token');
+        }
         
         if (webhook) document.getElementById('webhook').value = webhook;
         if (token) document.getElementById('token').value = token;
