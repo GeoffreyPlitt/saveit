@@ -42,7 +42,7 @@ Perfect for developers, researchers, content curators, and anyone who needs to q
 {
   "url": "https://example.com",
   "title": "Example Page",
-  "timestamp": 1716859200000
+  "timestamp": "2024-05-28T00:00:00.000Z"
 }
 ```
 
