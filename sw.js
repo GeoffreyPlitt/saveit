@@ -23,21 +23,30 @@ self.addEventListener('install', event => {
         console.log('Caching app shell');
         return cache.addAll(CACHE_FILES);
       })
+      .then(() => {
+        // Activate immediately
+        return self.skipWaiting();
+      })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.filter(cacheName => {
-          return cacheName !== CACHE_NAME;
-        }).map(cacheName => {
-          return caches.delete(cacheName);
-        })
-      );
-    })
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.filter(cacheName => {
+            return cacheName !== CACHE_NAME;
+          }).map(cacheName => {
+            return caches.delete(cacheName);
+          })
+        );
+      }),
+      // Claim any clients immediately
+      self.clients.claim()
+    ])
   );
 });
 
@@ -111,26 +120,61 @@ async function showToast(message, toastType = 'success') {
 }
 
 /**
- * Handle share target request - Stub implementation for Milestone 2
- * Will be fully implemented in Milestone 3
+ * Handle share target request
  * @param {Request} request - The share target request
  * @returns {Promise<Response>} - Redirects back to home page
  */
 async function handleShare(request) {
   try {
-    console.log('Share target received - will be implemented in Milestone 3');
-    
     // Check if webhook is configured
     const webhook = await readFromIDB('webhook');
     const token = await readFromIDB('token');
     
     if (!webhook || !token) {
-      // Show a toast message that the webhook is not configured
       await showToast('Please configure your webhook settings first', 'error');
-    } else {
-      // This is just a test for Milestone 2
-      console.log(`Settings found - Webhook: ${webhook.substring(0, 10)}..., Token: ${token ? 'configured' : 'missing'}`);
-      await showToast('Share received, webhook configured (will be processed in Milestone 3)', 'success');
+      return Response.redirect('./', 303);
+    }
+    
+    // Clone the request to extract form data
+    const formData = await request.formData();
+    
+    // Extract shared data
+    const title = formData.get('title') || '';
+    const text = formData.get('text') || '';
+    const url = formData.get('url') || '';
+    
+    // Create payload with timestamp
+    const payload = {
+      title,
+      text,
+      url,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Log the received data (only in development)
+    console.log('Share received:', payload);
+    
+    // Send to webhook
+    try {
+      const response = await fetch(webhook, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.ok) {
+        await showToast('Content successfully sent to webhook', 'success');
+      } else {
+        const errorText = await response.text();
+        console.error('Webhook error:', response.status, errorText);
+        await showToast(`Error: ${response.status} ${response.statusText}`, 'error');
+      }
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
+      await showToast('Failed to connect to webhook. Check your network and webhook URL.', 'error');
     }
   } catch (error) {
     console.error('Error in share handler:', error);
