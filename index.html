@@ -76,7 +76,13 @@
     }
     .status {
       margin-top: 1rem;
-      padding: 0.5rem;
+      padding: 0.75rem;
+      border-radius: 4px;
+    }
+    .status.success {
+      background-color: #dcfce7;
+      color: #14532d;
+      border-left: 4px solid #22c55e;
     }
     .toast {
       position: fixed;
@@ -162,14 +168,95 @@
       });
     }
 
-    // Basic event listeners setup (we'll implement functionality in Milestone 2)
-    document.getElementById('settings-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      // Will implement in next milestone
-      showToast('Settings will be saved in Milestone 2', 'success');
-    });
+    // IndexedDB configuration
+    const DB_NAME = 'saveit-db';
+    const DB_VERSION = 1;
+    const SETTINGS_STORE = 'settings';
 
-    // Simple toast notification
+    // Open IndexedDB connection
+    function openDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        
+        request.onerror = event => {
+          reject('IndexedDB error: ' + event.target.error);
+        };
+        
+        request.onsuccess = event => {
+          resolve(event.target.result);
+        };
+        
+        request.onupgradeneeded = event => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+            db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
+          }
+        };
+      });
+    }
+
+    // Save a setting to IndexedDB
+    async function saveSetting(key, value) {
+      const db = await openDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([SETTINGS_STORE], 'readwrite');
+        const store = transaction.objectStore(SETTINGS_STORE);
+        const request = store.put({ key, value });
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Get a setting from IndexedDB
+    async function getSetting(key) {
+      const db = await openDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([SETTINGS_STORE], 'readonly');
+        const store = transaction.objectStore(SETTINGS_STORE);
+        const request = store.get(key);
+        
+        request.onsuccess = () => {
+          resolve(request.result ? request.result.value : null);
+        };
+        
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Save all settings at once
+    async function saveSettings(webhook, token) {
+      try {
+        await Promise.all([
+          saveSetting('webhook', webhook),
+          saveSetting('token', token)
+        ]);
+        return true;
+      } catch (error) {
+        console.error('Error saving settings:', error);
+        return false;
+      }
+    }
+
+    // Load settings from IndexedDB
+    async function loadSettings() {
+      try {
+        const [webhook, token] = await Promise.all([
+          getSetting('webhook'),
+          getSetting('token')
+        ]);
+        
+        if (webhook) document.getElementById('webhook').value = webhook;
+        if (token) document.getElementById('token').value = token;
+        
+        return { webhook, token };
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        return {};
+      }
+    }
+
+    // Display toast notification
     function showToast(message, type = 'success', duration = 3000) {
       const toast = document.getElementById('toast');
       toast.textContent = message;
@@ -179,6 +266,61 @@
         toast.className = 'toast';
       }, duration);
     }
+
+    // Form submission handler
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const webhook = document.getElementById('webhook').value.trim();
+      const token = document.getElementById('token').value.trim();
+      
+      // Validate input
+      if (!webhook) {
+        showToast('Please enter a webhook URL', 'error');
+        return;
+      }
+      
+      if (!token) {
+        showToast('Please enter a bearer token', 'error');
+        return;
+      }
+      
+      try {
+        // Validate URL format
+        new URL(webhook);
+        
+        // Save to IndexedDB
+        const success = await saveSettings(webhook, token);
+        
+        if (success) {
+          showToast('Settings saved successfully', 'success');
+          document.getElementById('status').textContent = 'Settings saved. Ready to share!';
+          document.getElementById('status').className = 'status success';
+        } else {
+          showToast('Failed to save settings', 'error');
+        }
+      } catch (error) {
+        showToast('Please enter a valid URL', 'error');
+      }
+    });
+    
+    // Load saved settings on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings().then(settings => {
+        if (settings.webhook && settings.token) {
+          document.getElementById('status').textContent = 'Settings loaded. Ready to share!';
+          document.getElementById('status').className = 'status success';
+        } else {
+          document.getElementById('status').textContent = 'Please configure your webhook settings.';
+        }
+      });
+    });
+
+    // Handle messages from service worker
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data && event.data.type === 'SHOW_TOAST') {
+        showToast(event.data.message, event.data.toastType || 'success');
+      }
+    });
   </script>
 </body>
 </html>
