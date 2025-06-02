@@ -162,6 +162,7 @@
     <img src="icons/icon-192.png" alt="SaveIt">
     <h1>SaveIt</h1>
     <p>Configure your webhook settings to start saving URLs from Android</p>
+    <div id="version-info" style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;"></div>
   </div>
 
   <div class="feature-info">
@@ -236,6 +237,33 @@
   <div id="toast" class="toast"></div>
 
   <script>
+    // Function to extract and display service worker version
+    async function displayServiceWorkerVersion() {
+      try {
+        const response = await fetch('sw.js');
+        const swContent = await response.text();
+        
+        // Extract version from the service worker file
+        const versionMatch = swContent.match(/const SW_VERSION = ['"`]([^'"`]+)['"`]/);
+        const cacheMatch = swContent.match(/const CACHE_NAME = ['"`]([^'"`]+)['"`]/);
+        
+        if (versionMatch && cacheMatch) {
+          const version = versionMatch[1];
+          const cacheName = cacheMatch[1];
+          document.getElementById('version-info').textContent = `Version ${version} (${cacheName})`;
+          console.log(`Detected SW version: ${version}, cache: ${cacheName}`);
+        } else {
+          document.getElementById('version-info').textContent = 'Version: unknown';
+        }
+      } catch (error) {
+        console.error('Failed to read service worker version:', error);
+        document.getElementById('version-info').textContent = 'Version: error reading';
+      }
+    }
+
+    // Display version on page load
+    displayServiceWorkerVersion();
+
     // Register Service Worker with better error handling
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {

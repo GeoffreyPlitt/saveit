@@ -50,7 +50,10 @@ self.addEventListener('activate', event => {
         );
       }),
       // Claim any clients immediately
-      self.clients.claim()
+      self.clients.claim().then(() => {
+        // Broadcast version to all clients after claiming them
+        return broadcastVersionToClients();
+      })
     ])
   );
 });
@@ -444,4 +447,17 @@ async function handleShare(request) {
     // Redirect to main app to show error in UI
     return Response.redirect(redirectUrl, 303);
   }
+}
+
+// Broadcast version information to all clients
+async function broadcastVersionToClients() {
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => {
+    client.postMessage({
+      type: 'SW_VERSION',
+      version: SW_VERSION,
+      cacheName: CACHE_NAME
+    });
+  });
+  console.log(`Broadcasted SW version ${SW_VERSION} to ${clients.length} clients`);
 }
