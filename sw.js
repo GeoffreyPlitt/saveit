@@ -242,11 +242,16 @@ async function handleShare(request) {
     if (!navigator.onLine) {
       console.log('Device is offline, showing error notification');
       
+      const errorMessage = 'You are offline. Cannot send to webhook.';
+      let redirectUrl = `./?webhookError=true&errorMessage=${encodeURIComponent(errorMessage)}&errorType=offline`;
+      
+      console.log('Redirecting to main app with offline error info:', redirectUrl);
+      
       // Try to show notification, but handle permission gracefully
       try {
         if ('Notification' in self && self.Notification.permission === 'granted') {
           await self.registration.showNotification('SaveIt Error', {
-            body: 'You are offline. Cannot send to webhook.',
+            body: errorMessage,
             icon: './icons/icon-192.png',
             requireInteraction: true,
             tag: 'saveit-offline-error'
@@ -258,8 +263,8 @@ async function handleShare(request) {
         console.error('Failed to show offline notification:', notificationError);
       }
       
-      // Return a 204 to silently complete the share action
-      return new Response(null, { status: 204 });
+      // Redirect to main app to show error in UI
+      return Response.redirect(redirectUrl, 303);
     }
     
     // Send to webhook
@@ -333,7 +338,18 @@ async function handleShare(request) {
             errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
         
-        // Show a persistent error notification
+        // For client errors (4xx) and server errors (5xx), redirect to main app with error info
+        // This ensures the user sees the error message in the UI instead of a blank screen
+        let redirectUrl = `./?webhookError=true&errorMessage=${encodeURIComponent(errorMessage)}&errorStatus=${response.status}`;
+        
+        // Include the webhook response details for debugging
+        if (errorText && errorText.length < 200) {
+          redirectUrl += `&errorDetails=${encodeURIComponent(errorText)}`;
+        }
+        
+        console.log('Redirecting to main app with error info:', redirectUrl);
+        
+        // Also try to show a notification as backup
         try {
           if ('Notification' in self && self.Notification.permission === 'granted') {
             await self.registration.showNotification('SaveIt Error', {
@@ -349,8 +365,8 @@ async function handleShare(request) {
           console.error('Failed to show webhook error notification:', notificationError);
         }
         
-        // Return a 204 to silently complete the share action
-        return new Response(null, { status: 204 });
+        // Redirect to main app to show error in UI
+        return Response.redirect(redirectUrl, 303);
       }
     } catch (fetchError) {
       console.error('Fetch error:', fetchError);
@@ -365,7 +381,12 @@ async function handleShare(request) {
         errorMessage = 'You are offline. Cannot send to webhook.';
       }
       
-      // Show a persistent error notification
+      // For network errors, also redirect to main app with error info
+      let redirectUrl = `./?webhookError=true&errorMessage=${encodeURIComponent(errorMessage)}&errorType=network`;
+      
+      console.log('Redirecting to main app with network error info:', redirectUrl);
+      
+      // Also try to show a notification as backup
       try {
         if ('Notification' in self && self.Notification.permission === 'granted') {
           await self.registration.showNotification('SaveIt Error', {
@@ -381,17 +402,23 @@ async function handleShare(request) {
         console.error('Failed to show fetch error notification:', notificationError);
       }
       
-      // Return a 204 to silently complete the share action
-      return new Response(null, { status: 204 });
+      // Redirect to main app to show error in UI
+      return Response.redirect(redirectUrl, 303);
     }
   } catch (error) {
     console.error('Error in share handler:', error);
     
-    // Show a persistent generic error notification
+    // For general errors, also redirect to main app
+    const errorMessage = 'Error processing share. Please try again.';
+    let redirectUrl = `./?webhookError=true&errorMessage=${encodeURIComponent(errorMessage)}&errorType=general`;
+    
+    console.log('Redirecting to main app with general error info:', redirectUrl);
+    
+    // Also try to show a notification as backup
     try {
       if ('Notification' in self && self.Notification.permission === 'granted') {
         await self.registration.showNotification('SaveIt Error', {
-          body: 'Error processing share. Please try again.',
+          body: errorMessage,
           icon: './icons/icon-192.png',
           requireInteraction: true,
           tag: 'saveit-general-error'
@@ -403,7 +430,7 @@ async function handleShare(request) {
       console.error('Failed to show generic error notification:', notificationError);
     }
     
-    // Return a 204 to silently complete the share action
-    return new Response(null, { status: 204 });
+    // Redirect to main app to show error in UI
+    return Response.redirect(redirectUrl, 303);
   }
 }

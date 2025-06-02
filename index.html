@@ -114,6 +114,11 @@
       color: #a16207;
       border-left: 4px solid #f59e0b;
     }
+    .status.error {
+      background-color: #fee2e2;
+      color: #7f1d1d;
+      border-left: 4px solid #dc2626;
+    }
     .toast {
       position: fixed;
       bottom: 2rem;
@@ -536,6 +541,59 @@
       window.history.replaceState({}, document.title, newUrl);
     }
 
+    // Handle webhook errors from service worker
+    function handleWebhookError() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasWebhookError = urlParams.get('webhookError') === 'true';
+      
+      if (!hasWebhookError) {
+        return false; // No webhook error to handle
+      }
+      
+      console.log('Webhook error detected - displaying error message');
+      
+      const errorMessage = urlParams.get('errorMessage') || 'Unknown webhook error';
+      const errorStatus = urlParams.get('errorStatus');
+      const errorDetails = urlParams.get('errorDetails');
+      const errorType = urlParams.get('errorType');
+      
+      // Create a detailed error message
+      let statusHtml = `<strong>❌ Webhook Error</strong><br>${errorMessage}`;
+      
+      // Add additional details if available
+      if (errorStatus) {
+        statusHtml += `<br><small>HTTP Status: ${errorStatus}</small>`;
+      }
+      
+      if (errorDetails) {
+        statusHtml += `<br><small>Details: ${errorDetails}</small>`;
+      }
+      
+      if (errorType === 'network') {
+        statusHtml += '<br><br><em>This appears to be a network connectivity issue. Check your internet connection and webhook URL.</em>';
+      } else if (errorType === 'offline') {
+        statusHtml += '<br><br><em>You were offline when trying to share. Please check your internet connection and try sharing again.</em>';
+      } else if (errorStatus && (errorStatus.startsWith('4') || errorStatus.startsWith('5'))) {
+        statusHtml += '<br><br><em>Check your webhook URL and bearer token configuration below.</em>';
+      }
+      
+      // Display the error in the status area
+      document.getElementById('status').innerHTML = statusHtml;
+      document.getElementById('status').className = 'status error';
+      
+      // Also show a toast notification
+      showToast(`Webhook error: ${errorMessage}`, 'error', 6000);
+      
+      // Focus on the webhook configuration to help user fix the issue
+      document.getElementById('webhook').scrollIntoView({ behavior: 'smooth' });
+      
+      // Clear the URL parameters to avoid re-showing the error
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      return true; // Webhook error was handled
+    }
+
     // Form submission handler
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -590,7 +648,17 @@
     
     // Load saved settings on page load
     window.addEventListener('DOMContentLoaded', async () => {
-      // First, handle any onboarding flow
+      // First, check for webhook errors from service worker
+      const hasWebhookError = handleWebhookError();
+      
+      if (hasWebhookError) {
+        // If we handled a webhook error, load existing settings to populate the form
+        // but don't override the error status message
+        loadSettings();
+        return;
+      }
+      
+      // Second, handle any onboarding flow
       await handleFirstShare();
       
       // Then load existing settings (if not in onboarding mode)
