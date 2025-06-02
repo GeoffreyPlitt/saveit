@@ -243,16 +243,34 @@
           const registration = await navigator.serviceWorker.register('sw.js');
           console.log('Service Worker registered with scope:', registration.scope);
           
+          // Force update to latest service worker version
+          if (registration.waiting) {
+            // There's a new service worker waiting, activate it immediately
+            console.log('Activating new service worker');
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+          
           // Check for updates to the Service Worker
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // New service worker is installed but waiting to activate
-                console.log('New service worker available');
-                showToast('New version available. Reload to update.', 'success');
+                console.log('New service worker available, activating...');
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                // Force reload to get the new version
+                window.location.reload();
               }
             });
+          });
+          
+          // Listen for service worker updates
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('Service worker updated');
+            // Optionally reload the page to ensure we're using the new version
+            if (!window.location.search.includes('sw-updated')) {
+              window.location.href = window.location.href + (window.location.search ? '&' : '?') + 'sw-updated=true';
+            }
           });
         } catch (error) {
           console.error('Service Worker registration failed:', error);

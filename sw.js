@@ -1,10 +1,11 @@
 /**
  * SaveIt PWA Service Worker
  * Handles share targets and forwards to webhook
+ * Version: 1.1 - Updated error handling
  */
 
-// Cache name for PWA assets
-const CACHE_NAME = 'saveit-cache-v1';
+// Cache name for PWA assets - increment version to force update
+const CACHE_NAME = 'saveit-cache-v2';
 
 // Files to cache
 const CACHE_FILES = [
@@ -49,6 +50,13 @@ self.addEventListener('activate', event => {
       self.clients.claim()
     ])
   );
+});
+
+// Handle messages from the main app
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Fetch event - handle share target and cache strategy
