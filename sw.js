@@ -55,8 +55,19 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
+  // More robust share target detection
+  const isShareTarget = (url.pathname === '/share-target' || 
+                        url.pathname === './share-target' || 
+                        url.pathname.endsWith('/share-target') ||
+                        url.pathname === 'share-target') && 
+                       event.request.method === 'POST';
+  
+  // Add some debugging
+  console.log('SW Fetch intercepted:', url.pathname, event.request.method, 'isShareTarget:', isShareTarget);
+  
   // Handle share target
-  if (url.pathname.endsWith('/share-target') && event.request.method === 'POST') {
+  if (isShareTarget) {
+    console.log('Handling share target request');
     // Check if FormData is available and functioning correctly
     if (typeof FormData !== 'undefined') {
       event.respondWith(handleShare(event.request));
@@ -174,9 +185,13 @@ async function showToast(message, toastType = 'success') {
  */
 async function handleShare(request) {
   try {
+    console.log('handleShare called - checking webhook configuration');
+    
     // Check if webhook is configured
     const webhook = await readFromStorage('webhook');
     const token = await readFromStorage('token');
+    
+    console.log('Webhook configured:', !!webhook, 'Token configured:', !!token);
     
     if (!webhook || !token) {
       console.log('No webhook configured, showing error notification');
@@ -188,6 +203,8 @@ async function handleShare(request) {
         requireInteraction: true, // This makes the notification persistent until user dismisses it
         tag: 'saveit-config-error'
       });
+      
+      console.log('Notification shown, returning 204');
       
       // Return a 204 to silently complete the share action without opening the app
       return new Response(null, { status: 204 });
