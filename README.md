@@ -7,6 +7,8 @@
 
 ### Send web pages and links to your configured webhook with one click. Perfect for saving content to your personal systems.
 
+<span style="color: #ff4d4d">**Note:** For Android users, we have a companion sharing tool available at https://geoffreyplitt.github.io/saveit/ that adds SaveIt as a share target option in Android's system share menu to accomplish similar functionality.</span>
+
 ## Screenshots
 
 <a href="./screenshots/1.jpg"><img src="./screenshots/1.jpg" alt="SaveIt Extension Screenshot 1" width="25%"></a>
