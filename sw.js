@@ -6,6 +6,9 @@
 
 // Cache name for PWA assets - increment version to force update
 const CACHE_NAME = 'saveit-cache-v2';
+const SW_VERSION = '1.1';
+
+console.log(`Service Worker ${SW_VERSION} loaded, using cache: ${CACHE_NAME}`);
 
 // Files to cache
 const CACHE_FILES = [
@@ -193,7 +196,7 @@ async function showToast(message, toastType = 'success') {
  */
 async function handleShare(request) {
   try {
-    console.log('handleShare called - checking webhook configuration');
+    console.log(`handleShare called - SW version ${SW_VERSION} - checking webhook configuration`);
     
     // Check if webhook is configured
     const webhook = await readFromStorage('webhook');
@@ -322,7 +325,7 @@ async function handleShare(request) {
         return new Response(null, { status: 204 });
       } else {
         const errorText = await response.text().catch(e => 'Could not read error details');
-        console.error('Webhook error:', response.status, errorText);
+        console.error(`Webhook error (SW ${SW_VERSION}):`, response.status, errorText);
         
         // More descriptive error messages based on status codes
         let errorMessage;
