@@ -728,6 +728,22 @@
     navigator.serviceWorker.addEventListener('message', event => {
       if (event.data && event.data.type === 'SHOW_TOAST') {
         showToast(event.data.message, event.data.toastType || 'success');
+      } else if (event.data && event.data.type === 'CLOSE_AFTER_SHARE') {
+        // Close the window if it was opened for sharing
+        console.log('Received close message from service worker');
+        try {
+          if (window.opener || window.history.length === 1) {
+            window.close();
+          } else {
+            // If we can't close, minimize the visual impact
+            document.body.style.display = 'none';
+            setTimeout(() => {
+              window.close();
+            }, 100);
+          }
+        } catch (error) {
+          console.log('Could not close window:', error);
+        }
       }
     });
     

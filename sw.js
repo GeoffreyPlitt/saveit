@@ -5,8 +5,8 @@
  */
 
 // Cache name for PWA assets - increment version to force update
-const CACHE_NAME = 'saveit-cache-v3';
-const SW_VERSION = '1.2';
+const CACHE_NAME = 'saveit-cache-v4';
+const SW_VERSION = '1.3';
 
 console.log(`Service Worker ${SW_VERSION} loaded, using cache: ${CACHE_NAME}`);
 
@@ -324,8 +324,36 @@ async function handleShare(request) {
           console.error('Failed to show success notification:', notificationError);
         }
         
-        // Return a 204 to silently complete the share action
-        return new Response(null, { status: 204 });
+        // Close any open clients to prevent showing the PWA window
+        try {
+          const clients = await self.clients.matchAll({ type: 'window' });
+          clients.forEach(client => {
+            // Send a message to close the window if it was opened for sharing
+            client.postMessage({ type: 'CLOSE_AFTER_SHARE' });
+          });
+        } catch (clientError) {
+          console.error('Failed to close clients:', clientError);
+        }
+        
+        // Return a minimal HTML response that closes itself
+        const closeScript = `
+          <html><head><title>SaveIt</title></head><body>
+          <script>
+            // Close the window if it was opened for sharing
+            if (window.opener || window.history.length === 1) {
+              window.close();
+            } else {
+              // If we can't close, redirect to about:blank to minimize visual impact
+              window.location.href = 'about:blank';
+            }
+          </script>
+          </body></html>
+        `;
+        
+        return new Response(closeScript, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' }
+        });
       } else {
         const errorText = await response.text().catch(e => 'Could not read error details');
         console.error(`Webhook error (SW ${SW_VERSION}):`, response.status, errorText);
