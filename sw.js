@@ -5,8 +5,8 @@
  */
 
 // Cache name for PWA assets - increment version to force update
-const CACHE_NAME = 'saveit-cache-v4';
-const SW_VERSION = '1.3';
+const CACHE_NAME = 'saveit-v1.4';
+const SW_VERSION = '1.4';
 
 console.log(`Service Worker ${SW_VERSION} loaded, using cache: ${CACHE_NAME}`);
 
