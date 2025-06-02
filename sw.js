@@ -5,8 +5,8 @@
  */
 
 // Cache name for PWA assets - increment version to force update
-const CACHE_NAME = 'saveit-cache-v2';
-const SW_VERSION = '1.1';
+const CACHE_NAME = 'saveit-cache-v3';
+const SW_VERSION = '1.2';
 
 console.log(`Service Worker ${SW_VERSION} loaded, using cache: ${CACHE_NAME}`);
 
@@ -242,10 +242,10 @@ async function handleShare(request) {
     const url = formData.get('url') || '';
     
     // Create payload with timestamp
+    // Note: Android share typically puts the URL in the 'text' field, not 'url' field
     const payload = {
+      url: text || url, // Use text field as URL (Android share behavior)
       title,
-      text,
-      url,
       timestamp: new Date().toISOString()
     };
     
