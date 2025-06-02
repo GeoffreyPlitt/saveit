@@ -244,8 +244,8 @@
         const swContent = await response.text();
         
         // Extract version from the service worker file
-        const versionMatch = swContent.match(/const SW_VERSION = ['"`]([^'"`]+)['"`]/);
-        const cacheMatch = swContent.match(/const CACHE_NAME = ['"`]([^'"`]+)['"`]/);
+        const versionMatch = swContent.match(/const SW_VERSION = '([^']+)'/);
+        const cacheMatch = swContent.match(/const CACHE_NAME = '([^']+)'/);
         
         if (versionMatch && cacheMatch) {
           const version = versionMatch[1];
@@ -254,6 +254,7 @@
           console.log(`Detected SW version: ${version}, cache: ${cacheName}`);
         } else {
           document.getElementById('version-info').textContent = 'Version: unknown';
+          console.log('Could not match version patterns in SW file');
         }
       } catch (error) {
         console.error('Failed to read service worker version:', error);
