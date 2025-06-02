@@ -105,9 +105,14 @@
       border-radius: 4px;
     }
     .status.success {
-      background-color: #dcfce7;
-      color: #14532d;
+      background-color: #d1fae5;
+      color: #065f46;
       border-left: 4px solid #22c55e;
+    }
+    .status.info {
+      background-color: #fef3c7;
+      color: #a16207;
+      border-left: 4px solid #f59e0b;
     }
     .toast {
       position: fixed;
@@ -122,9 +127,14 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .toast.success {
-      background-color: #dcfce7;
-      color: #14532d;
+      background-color: #d1fae5;
+      color: #065f46;
       border-left: 4px solid #22c55e;
+    }
+    .toast.warning {
+      background-color: #fef3c7;
+      color: #a16207;
+      border-left: 4px solid #f59e0b;
     }
     .toast.error {
       background-color: #fee2e2;
@@ -423,6 +433,109 @@
       }, duration);
     }
 
+    // Request notification permission with explanation
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        return false;
+      }
+      
+      if (Notification.permission === 'granted') {
+        return true;
+      }
+      
+      // Show explanation first
+      const userWantsNotifications = confirm(
+        'SaveIt needs notification permission to show you when content is saved successfully or if there are errors.\n\n' +
+        'This helps you know when sharing worked, especially since the share dialog closes automatically.\n\n' +
+        'Allow notifications?'
+      );
+      
+      if (!userWantsNotifications) {
+        return false;
+      }
+      
+      try {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        return false;
+      }
+    }
+
+    // Handle first share onboarding flow
+    async function handleFirstShare() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isFirstShare = urlParams.get('firstShare') === 'true';
+      const needsPermission = urlParams.get('needsPermission') === 'true';
+      const needsWebhook = urlParams.get('needsWebhook') === 'true';
+      
+      if (!isFirstShare) {
+        return; // Not a first share, proceed normally
+      }
+      
+      console.log('First share detected - starting onboarding');
+      
+      // Show a welcome message
+      document.getElementById('status').innerHTML = 
+        '<strong>Welcome to SaveIt!</strong><br>' +
+        'Let\'s set up SaveIt so you can start saving content.';
+      document.getElementById('status').className = 'status info';
+      
+      let setupSteps = [];
+      
+      if (needsPermission) {
+        setupSteps.push('Enable notifications');
+      }
+      
+      if (needsWebhook) {
+        setupSteps.push('Configure webhook');
+      }
+      
+      if (setupSteps.length > 0) {
+        const stepText = setupSteps.length === 1 ? 
+          `We need to ${setupSteps[0].toLowerCase()}.` :
+          `We need to: ${setupSteps.join(' and ').toLowerCase()}.`;
+          
+        document.getElementById('status').innerHTML += `<br><br>${stepText}`;
+      }
+      
+      // Step 1: Request notification permission if needed
+      if (needsPermission) {
+        const permissionGranted = await requestNotificationPermission();
+        
+        if (permissionGranted) {
+          showToast('✓ Notifications enabled!', 'success');
+        } else {
+          showToast('Notifications disabled - you won\'t see success/error messages', 'warning', 5000);
+        }
+      }
+      
+      // Step 2: Focus on webhook setup if needed
+      if (needsWebhook) {
+        document.getElementById('status').innerHTML = 
+          '<strong>Step 2: Configure Your Webhook</strong><br>' +
+          'Enter your webhook URL and token below to complete setup.';
+        document.getElementById('status').className = 'status info';
+        
+        // Scroll to and focus the webhook input
+        document.getElementById('webhook').focus();
+        document.getElementById('webhook').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        // If only permission was needed, we're done
+        document.getElementById('status').innerHTML = 
+          '<strong>Setup Complete!</strong><br>' +
+          'SaveIt is ready to use. Try sharing content again!';
+        document.getElementById('status').className = 'status success';
+        
+        showToast('Setup complete! Try sharing again.', 'success');
+      }
+      
+      // Clear the URL parameters to avoid re-running onboarding
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+
     // Form submission handler
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -449,8 +562,24 @@
         
         if (success) {
           showToast('Settings saved successfully', 'success');
-          document.getElementById('status').textContent = 'Settings saved. Ready to share!';
-          document.getElementById('status').className = 'status success';
+          
+          // Check if this was part of onboarding
+          const urlParams = new URLSearchParams(window.location.search);
+          const wasFirstShare = urlParams.get('firstShare') === 'true';
+          
+          if (wasFirstShare) {
+            // Onboarding complete!
+            document.getElementById('status').innerHTML = 
+              '<strong>🎉 Setup Complete!</strong><br>' +
+              'SaveIt is now configured and ready to use.<br>' +
+              '<em>Try sharing content again - it should work now!</em>';
+            document.getElementById('status').className = 'status success';
+            showToast('🎉 All done! Try sharing content now.', 'success', 5000);
+          } else {
+            // Regular save
+            document.getElementById('status').textContent = 'Settings saved. Ready to share!';
+            document.getElementById('status').className = 'status success';
+          }
         } else {
           showToast('Failed to save settings', 'error');
         }
@@ -460,15 +589,24 @@
     });
     
     // Load saved settings on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      loadSettings().then(settings => {
-        if (settings.webhook && settings.token) {
-          document.getElementById('status').textContent = 'Settings loaded. Ready to share!';
-          document.getElementById('status').className = 'status success';
-        } else {
-          document.getElementById('status').textContent = 'Please configure your webhook settings.';
-        }
-      });
+    window.addEventListener('DOMContentLoaded', async () => {
+      // First, handle any onboarding flow
+      await handleFirstShare();
+      
+      // Then load existing settings (if not in onboarding mode)
+      const urlParams = new URLSearchParams(window.location.search);
+      const isFirstShare = urlParams.get('firstShare') === 'true';
+      
+      if (!isFirstShare) {
+        loadSettings().then(settings => {
+          if (settings.webhook && settings.token) {
+            document.getElementById('status').textContent = 'Settings loaded. Ready to share!';
+            document.getElementById('status').className = 'status success';
+          } else {
+            document.getElementById('status').textContent = 'Please configure your webhook settings.';
+          }
+        });
+      }
     });
 
     // Handle messages from service worker

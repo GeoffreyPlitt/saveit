@@ -193,23 +193,32 @@ async function handleShare(request) {
     
     console.log('Webhook configured:', !!webhook, 'Token configured:', !!token);
     
-    if (!webhook || !token) {
-      console.log('No webhook configured, showing error notification');
+    // Check notification permission
+    const hasNotificationPermission = 'Notification' in self && self.Notification.permission === 'granted';
+    console.log('Notification permission granted:', hasNotificationPermission);
+    
+    // If missing webhook OR notification permission, redirect to onboarding
+    if (!webhook || !token || !hasNotificationPermission) {
+      console.log('Missing webhook or notification permission - redirecting to onboarding');
       
-      // Show a persistent error notification that requires user dismissal
-      await self.registration.showNotification('SaveIt Configuration Required', {
-        body: 'No webhook configured. Please open SaveIt app and configure one.',
-        icon: './icons/icon-192.png',
-        requireInteraction: true, // This makes the notification persistent until user dismisses it
-        tag: 'saveit-config-error'
-      });
+      // Build redirect URL with appropriate parameters
+      let redirectUrl = './?firstShare=true';
       
-      console.log('Notification shown, returning 204');
+      if (!webhook || !token) {
+        redirectUrl += '&needsWebhook=true';
+      }
       
-      // Return a 204 to silently complete the share action without opening the app
-      return new Response(null, { status: 204 });
+      if (!hasNotificationPermission) {
+        redirectUrl += '&needsPermission=true';
+      }
+      
+      console.log('Redirecting to:', redirectUrl);
+      
+      // Redirect to main app for onboarding
+      return Response.redirect(redirectUrl, 303);
     }
     
+    // If we get here, both webhook and permission are configured
     // Clone the request to extract form data
     const formData = await request.formData();
     
@@ -233,13 +242,21 @@ async function handleShare(request) {
     if (!navigator.onLine) {
       console.log('Device is offline, showing error notification');
       
-      // Show a persistent offline error notification
-      await self.registration.showNotification('SaveIt Error', {
-        body: 'You are offline. Cannot send to webhook.',
-        icon: './icons/icon-192.png',
-        requireInteraction: true, // Make it persistent
-        tag: 'saveit-offline-error'
-      });
+      // Try to show notification, but handle permission gracefully
+      try {
+        if ('Notification' in self && self.Notification.permission === 'granted') {
+          await self.registration.showNotification('SaveIt Error', {
+            body: 'You are offline. Cannot send to webhook.',
+            icon: './icons/icon-192.png',
+            requireInteraction: true,
+            tag: 'saveit-offline-error'
+          });
+        } else {
+          console.log('No notification permission - cannot show offline notification');
+        }
+      } catch (notificationError) {
+        console.error('Failed to show offline notification:', notificationError);
+      }
       
       // Return a 204 to silently complete the share action
       return new Response(null, { status: 204 });
@@ -265,20 +282,28 @@ async function handleShare(request) {
         console.log(`Webhook response: ${response.status}`);
         
         // Show a temporary success notification (will disappear after 5 seconds)
-        const notificationTag = 'saveit-success-' + Date.now();
-        await self.registration.showNotification('SaveIt', {
-          body: 'Content successfully sent to webhook',
-          icon: './icons/icon-192.png',
-          tag: notificationTag
-        });
-        
-        // Set a timeout to close the notification after 5 seconds
-        setTimeout(async () => {
-          const notifications = await self.registration.getNotifications({
-            tag: notificationTag
-          });
-          notifications.forEach(notification => notification.close());
-        }, 5000);
+        try {
+          if ('Notification' in self && self.Notification.permission === 'granted') {
+            const notificationTag = 'saveit-success-' + Date.now();
+            await self.registration.showNotification('SaveIt', {
+              body: 'Content successfully sent to webhook',
+              icon: './icons/icon-192.png',
+              tag: notificationTag
+            });
+            
+            // Set a timeout to close the notification after 5 seconds
+            setTimeout(async () => {
+              const notifications = await self.registration.getNotifications({
+                tag: notificationTag
+              });
+              notifications.forEach(notification => notification.close());
+            }, 5000);
+          } else {
+            console.log('No notification permission - cannot show success notification');
+          }
+        } catch (notificationError) {
+          console.error('Failed to show success notification:', notificationError);
+        }
         
         // Return a 204 to silently complete the share action
         return new Response(null, { status: 204 });
@@ -309,12 +334,20 @@ async function handleShare(request) {
         }
         
         // Show a persistent error notification
-        await self.registration.showNotification('SaveIt Error', {
-          body: errorMessage,
-          icon: './icons/icon-192.png',
-          requireInteraction: true, // Make it persistent
-          tag: 'saveit-webhook-error'
-        });
+        try {
+          if ('Notification' in self && self.Notification.permission === 'granted') {
+            await self.registration.showNotification('SaveIt Error', {
+              body: errorMessage,
+              icon: './icons/icon-192.png',
+              requireInteraction: true,
+              tag: 'saveit-webhook-error'
+            });
+          } else {
+            console.log('No notification permission - cannot show webhook error notification');
+          }
+        } catch (notificationError) {
+          console.error('Failed to show webhook error notification:', notificationError);
+        }
         
         // Return a 204 to silently complete the share action
         return new Response(null, { status: 204 });
@@ -333,12 +366,20 @@ async function handleShare(request) {
       }
       
       // Show a persistent error notification
-      await self.registration.showNotification('SaveIt Error', {
-        body: errorMessage,
-        icon: './icons/icon-192.png',
-        requireInteraction: true, // Make it persistent
-        tag: 'saveit-fetch-error'
-      });
+      try {
+        if ('Notification' in self && self.Notification.permission === 'granted') {
+          await self.registration.showNotification('SaveIt Error', {
+            body: errorMessage,
+            icon: './icons/icon-192.png',
+            requireInteraction: true,
+            tag: 'saveit-fetch-error'
+          });
+        } else {
+          console.log('No notification permission - cannot show fetch error notification');
+        }
+      } catch (notificationError) {
+        console.error('Failed to show fetch error notification:', notificationError);
+      }
       
       // Return a 204 to silently complete the share action
       return new Response(null, { status: 204 });
@@ -347,12 +388,20 @@ async function handleShare(request) {
     console.error('Error in share handler:', error);
     
     // Show a persistent generic error notification
-    await self.registration.showNotification('SaveIt Error', {
-      body: 'Error processing share. Please try again.',
-      icon: './icons/icon-192.png',
-      requireInteraction: true, // Make it persistent
-      tag: 'saveit-general-error'
-    });
+    try {
+      if ('Notification' in self && self.Notification.permission === 'granted') {
+        await self.registration.showNotification('SaveIt Error', {
+          body: 'Error processing share. Please try again.',
+          icon: './icons/icon-192.png',
+          requireInteraction: true,
+          tag: 'saveit-general-error'
+        });
+      } else {
+        console.log('No notification permission - cannot show generic error notification');
+      }
+    } catch (notificationError) {
+      console.error('Failed to show generic error notification:', notificationError);
+    }
     
     // Return a 204 to silently complete the share action
     return new Response(null, { status: 204 });
