@@ -1,11 +1,13 @@
 # SaveIt - Webhook Manager Chrome Extension
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Coming%20Soon-blue)](https://chrome.google.com/webstore)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Available-blue)](https://chrome.google.com/webstore/detail/dkebanddacekoaemedabedngnokpmeep)
 [![Tests](https://github.com/GeoffreyPlitt/saveit/workflows/Tests/badge.svg)](https://github.com/GeoffreyPlitt/saveit/actions)
 [![codecov](https://codecov.io/gh/GeoffreyPlitt/saveit/graph/badge.svg?token=OTASLQOR3R)](https://codecov.io/gh/GeoffreyPlitt/saveit)
 
 ### Send web pages and links to your configured webhook with one click. Perfect for saving content to your personal systems.
+
+**🚀 [Install from Chrome Web Store](https://chrome.google.com/webstore/detail/dkebanddacekoaemedabedngnokpmeep)**
 
 > 📱 **Note:** For Android users, we have a companion sharing tool available at https://geoffreyplitt.github.io/saveit/ that adds SaveIt as a share target option in Android's system share menu to accomplish similar functionality.
 
@@ -50,6 +52,12 @@ Perfect for developers, researchers, content curators, and anyone who needs to q
 
 ## Installation
 
+### From Chrome Web Store (Recommended)
+1. Visit the [SaveIt Chrome Web Store page](https://chrome.google.com/webstore/detail/dkebanddacekoaemedabedngnokpmeep)
+2. Click "Add to Chrome"
+3. Configure your webhook settings by right-clicking the extension icon → "Options"
+
+### From Source (Development)
 1. Clone this repository:
    ```bash
    git clone https://github.com/GeoffreyPlitt/saveit.git
